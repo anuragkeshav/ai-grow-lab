@@ -1,0 +1,2 @@
+# AI Grow Lab Backend
+# No external dependencies — uses Python standard library only
