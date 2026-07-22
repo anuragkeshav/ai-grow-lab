@@ -8,6 +8,9 @@
       content="AI Grow Lab builds research-led creator campaigns for ambitious consumer brands."
     />
     <title>AI Grow Lab — Creator campaigns with a growth plan</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -102,6 +105,7 @@
         animation: preloader-bar 1s ease-in-out infinite;
       }
       @keyframes preloader-bar { 0%,100%{ transform: scaleX(.3); opacity:.4; } 50%{ transform: scaleX(1); opacity:1; } }
+      @keyframes preloader-logo { from { opacity:0; transform: scale(.7) translateY(10px); } to { opacity:1; transform: scale(1) translateY(0); } }
 
       /* ══════ BACK TO TOP ══════ */
       .back-top {
@@ -167,9 +171,15 @@
         min-height: 78px; display: flex; justify-content: space-between; align-items: center;
         position: relative; z-index: 5;
       }
-      .brand { font-weight: 800; font-size: 1.15rem; letter-spacing: -.06em; transition: opacity .2s ease; }
+      .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.15rem; letter-spacing: -.06em; transition: opacity .2s ease; }
       .brand:hover { opacity: .7; }
       .brand span { color: #5d7100; }
+      .brand-logo {
+        width: 34px; height: 34px; border-radius: 8px; object-fit: cover;
+        box-shadow: 0 2px 8px rgba(0,0,0,.08);
+        transition: transform .3s ease;
+      }
+      .brand:hover .brand-logo { transform: scale(1.08) rotate(-3deg); }
       .nav-links { display: flex; align-items: center; gap: 8px; font-size: .8rem; font-weight: 700; }
       .nav-links > a:not(.button) {
         opacity: .6; transition: opacity .25s ease, background .25s ease, color .25s ease;
@@ -704,6 +714,7 @@
   <body>
     <!-- Preloader -->
     <div class="preloader" id="preloader">
+      <img src="logo.jpg" alt="" width="56" height="56" style="border-radius:14px; box-shadow: 0 4px 24px rgba(0,0,0,.2); animation: preloader-logo .8s cubic-bezier(.2,.8,.2,1) both;" />
       <div class="preloader-text"><span>AI&nbsp;</span><span>GROW&nbsp;</span><span>LAB</span></div>
     </div>
     <!-- Grain overlay -->
@@ -718,7 +729,7 @@
       <div class="nav-wrap" id="nav-wrap">
         <header class="container">
           <nav aria-label="Primary navigation">
-            <a class="brand" href="#top" aria-label="AI Grow Lab home">AI <span>GROW</span> LAB</a>
+            <a class="brand" href="#top" aria-label="AI Grow Lab home"><img class="brand-logo" src="logo.jpg" alt="AI Grow Lab" width="34" height="34" />AI <span>GROW</span> LAB</a>
             <button class="menu" type="button" aria-expanded="false" aria-controls="site-links">Menu</button>
             <div class="nav-links" id="site-links">
               <a href="#services">What we do</a>
@@ -961,7 +972,10 @@
       <footer>
         <div class="container">
           <div class="footer-top" data-r="up">
-            <h2 class="footer-title">Creator-led growth.<br /><em>Built with intent.</em></h2>
+            <div>
+              <img src="logo.jpg" alt="AI Grow Lab" width="48" height="48" style="border-radius:12px; margin-bottom:20px; box-shadow: 0 4px 16px rgba(0,0,0,.15);" />
+              <h2 class="footer-title">Creator-led growth.<br /><em>Built with intent.</em></h2>
+            </div>
             <div class="footer-links"><a href="#services">Services</a><a href="#method">Method</a><a href="#contact">Contact</a></div>
           </div>
           <div class="footer-bottom"><p>© <span id="year"></span> AI Grow Lab</p><p>Research first. Always.</p></div>
