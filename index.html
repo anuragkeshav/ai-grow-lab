@@ -943,9 +943,9 @@
       document.querySelectorAll('[data-count]').forEach(el => counterObserver.observe(el));
 
       /* ══════ FORM ══════ */
-      // ⚠️ REPLACE with your Render backend URL (e.g. https://ai-grow-lab.onrender.com)
-      const BACKEND_URL = 'https://ai-grow-lab-backend.onrender.com';
-      const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+      // Render backend URL (used only when frontend is on a different domain like Netlify)
+      const BACKEND_URL = 'https://ai-grow-lab.onrender.com';
+      const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.hostname.endsWith('.onrender.com'))
         ? '' : BACKEND_URL;
 
       document.getElementById('contact-form').addEventListener('submit', async (event) => {
