@@ -8,7 +8,7 @@
       content="AI Grow Lab builds research-led creator campaigns for ambitious consumer brands."
     />
     <title>AI Grow Lab — Creator campaigns with a growth plan</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%2311110f'/><path d='M16 4 L27 10 L27 22 L16 28 L5 22 L5 10 Z' fill='none' stroke='%23d8ff4e' stroke-width='1.5'/><path d='M12 22 L16 8 L20 22 M13.5 18 h5' fill='none' stroke='%23fff' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/><path d='M19 14 L22 10 M22 10 L22 14 M22 10 L18 10' fill='none' stroke='%23ff8d70' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/></svg>" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%2318181b'/><stop offset='1' stop-color='%2327272a'/></linearGradient></defs><rect width='32' height='32' rx='8' fill='url(%23g)'/><path d='M10.5 24L16 7l5.5 17M12.5 19h7' fill='none' stroke='%23d8ff4e' stroke-width='2.8' stroke-linecap='round' stroke-linejoin='round'/><path d='M20.5 13l3-4m0 0v3.5m0-3.5h-3.5' fill='none' stroke='%23ff8d70' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/></svg>" />
     <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -31,7 +31,18 @@
         --mono: "DM Mono", monospace;
       }
 
-      * { box-sizing: border-box; }
+      * {
+        box-sizing: border-box;
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
+        -webkit-touch-callout: none;
+      }
+      input, textarea, select, [contenteditable="true"] {
+        -webkit-user-select: text;
+        user-select: text;
+        -webkit-touch-callout: default;
+      }
       html { scroll-behavior: smooth; }
       body {
         margin: 0;
