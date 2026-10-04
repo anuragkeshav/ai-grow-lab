@@ -1,0 +1,971 @@
+{
+  "method": "Three warm-cache runs per revision/configuration; Chrome DevTools Protocol; see performance.md",
+  "profiles": [
+    {
+      "device": "desktop",
+      "cpuSlowdown": 1,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "browser": "154.0.8037.93",
+      "before": [
+        {
+          "run": 1,
+          "distanceCssPx": 4236,
+          "elapsedMs": 7603,
+          "mainThreadMs": 776.001,
+          "scriptMs": 48.043,
+          "layoutCount": 62,
+          "forcedLayoutCount": 47,
+          "paintEvents": 250,
+          "longTasks": 0,
+          "rafP95Ms": 16.7,
+          "rafMaxMs": 16.8,
+          "rafOver25Ms": 0,
+          "traceDroppedFrameEvents": 35,
+          "tracePartialFrameEvents": 33
+        },
+        {
+          "run": 2,
+          "distanceCssPx": 4236,
+          "elapsedMs": 7613,
+          "mainThreadMs": 799.73,
+          "scriptMs": 47.931,
+          "layoutCount": 62,
+          "forcedLayoutCount": 47,
+          "paintEvents": 260,
+          "longTasks": 0,
+          "rafP95Ms": 16.7,
+          "rafMaxMs": 16.8,
+          "rafOver25Ms": 0,
+          "traceDroppedFrameEvents": 33,
+          "tracePartialFrameEvents": 31
+        },
+        {
+          "run": 3,
+          "distanceCssPx": 4236,
+          "elapsedMs": 7614,
+          "mainThreadMs": 806.918,
+          "scriptMs": 48.424,
+          "layoutCount": 62,
+          "forcedLayoutCount": 47,
+          "paintEvents": 260,
+          "longTasks": 0,
+          "rafP95Ms": 16.8,
+          "rafMaxMs": 16.8,
+          "rafOver25Ms": 0,
+          "traceDroppedFrameEvents": 31,
+          "tracePartialFrameEvents": 29
+        }
+      ],
+      "after": [
+        {
+          "run": 1,
+          "distanceCssPx": 4236,
+          "elapsedMs": 7598,
+          "mainThreadMs": 760.847,
+          "scriptMs": 21.761,
+          "layoutCount": 61,
+          "forcedLayoutCount": 0,
+          "paintEvents": 229,
+          "longTasks": 0,
+          "rafP95Ms": 16.8,
+          "rafMaxMs": 16.8,
+          "rafOver25Ms": 0,
+          "traceDroppedFrameEvents": 34,
+          "tracePartialFrameEvents": 34
+        },
+        {
+          "run": 2,
+          "distanceCssPx": 4236,
+          "elapsedMs": 7593,
+          "mainThreadMs": 734.517,
+          "scriptMs": 20.501,
+          "layoutCount": 62,
+          "forcedLayoutCount": 0,
+          "paintEvents": 231,
+          "longTasks": 0,
+          "rafP95Ms": 16.8,
+          "rafMaxMs": 16.8,
+          "rafOver25Ms": 0,
+          "traceDroppedFrameEvents": 31,
+          "tracePartialFrameEvents": 31
+        },
+        {
+          "run": 3,
+          "distanceCssPx": 4236,
+          "elapsedMs": 7594,
+          "mainThreadMs": 726.741,
+          "scriptMs": 21.023,
+          "layoutCount": 62,
+          "forcedLayoutCount": 0,
+          "paintEvents": 236,
+          "longTasks": 0,
+          "rafP95Ms": 16.7,
+          "rafMaxMs": 16.8,
+          "rafOver25Ms": 0,
+          "traceDroppedFrameEvents": 32,
+          "tracePartialFrameEvents": 32
+        }
+      ]
+    },
+    {
+      "device": "desktop",
+      "cpuSlowdown": 4,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "browser": "154.0.8037.93",
+      "before": [
+        {
+          "run": 1,
+          "distanceCssPx": 4236,
+          "elapsedMs": 7598,
+          "mainThreadMs": 637.787,
+          "scriptMs": 27.99,
+          "layoutCount": 62,
+          "forcedLayoutCount": 47,
+          "paintEvents": 255,
+          "longTasks": 0,
+          "rafP95Ms": 16.7,
+          "rafMaxMs": 16.8,
+          "rafOver25Ms": 0,
+          "traceDroppedFrameEvents": 34,
+          "tracePartialFrameEvents": 32
+        },
+        {
+          "run": 2,
+          "distanceCssPx": 4236,
+          "elapsedMs": 7586,
+          "mainThreadMs": 627.556,
+          "scriptMs": 25.87,
+          "layoutCount": 62,
+          "forcedLayoutCount": 47,
+          "paintEvents": 257,
+          "longTasks": 0,
+          "rafP95Ms": 16.8,
+          "rafMaxMs": 16.8,
+          "rafOver25Ms": 0,
+          "traceDroppedFrameEvents": 34,
+          "tracePartialFrameEvents": 32
+        },
+        {
+          "run": 3,
+          "distanceCssPx": 4236,
+          "elapsedMs": 7595,
+          "mainThreadMs": 653.52,
+          "scriptMs": 30.286,
+          "layoutCount": 63,
+          "forcedLayoutCount": 48,
+          "paintEvents": 255,
+          "longTasks": 0,
+          "rafP95Ms": 16.7,
+          "rafMaxMs": 16.8,
+          "rafOver25Ms": 0,
+          "traceDroppedFrameEvents": 33,
+          "tracePartialFrameEvents": 31
+        }
+      ],
+      "after": [
+        {
+          "run": 1,
+          "distanceCssPx": 4236,
+          "elapsedMs": 7589,
+          "mainThreadMs": 590.837,
+          "scriptMs": 14.282,
+          "layoutCount": 61,
+          "forcedLayoutCount": 0,
+          "paintEvents": 228,
+          "longTasks": 0,
+          "rafP95Ms": 16.7,
+          "rafMaxMs": 16.8,
+          "rafOver25Ms": 0,
+          "traceDroppedFrameEvents": 36,
+          "tracePartialFrameEvents": 34
+        },
+        {
+          "run": 2,
+          "distanceCssPx": 4236,
+          "elapsedMs": 7586,
+          "mainThreadMs": 559.02,
+          "scriptMs": 10.717,
+          "layoutCount": 61,
+          "forcedLayoutCount": 0,
+          "paintEvents": 236,
+          "longTasks": 0,
+          "rafP95Ms": 16.7,
+          "rafMaxMs": 16.8,
+          "rafOver25Ms": 0,
+          "traceDroppedFrameEvents": 33,
+          "tracePartialFrameEvents": 31
+        },
+        {
+          "run": 3,
+          "distanceCssPx": 4236,
+          "elapsedMs": 7578,
+          "mainThreadMs": 548.612,
+          "scriptMs": 9.529,
+          "layoutCount": 61,
+          "forcedLayoutCount": 0,
+          "paintEvents": 233,
+          "longTasks": 0,
+          "rafP95Ms": 16.8,
+          "rafMaxMs": 16.8,
+          "rafOver25Ms": 0,
+          "traceDroppedFrameEvents": 32,
+          "tracePartialFrameEvents": 30
+        }
+      ]
+    },
+    {
+      "device": "desktop",
+      "cpuSlowdown": 6,
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "browser": "154.0.8037.93",
+      "before": [
+        {
+          "run": 1,
+          "distanceCssPx": 4236,
+          "elapsedMs": 7612,
+          "mainThreadMs": 894.078,
+          "scriptMs": 36.063,
+          "layoutCount": 62,
+          "forcedLayoutCount": 47,
+          "paintEvents": 252,
+          "longTasks": 0,
+          "rafP95Ms": 16.8,
+          "rafMaxMs": 16.8,
+          "rafOver25Ms": 0,
+          "traceDroppedFrameEvents": 33,
+          "tracePartialFrameEvents": 31
+        },
+        {
+          "run": 2,
+          "distanceCssPx": 4236,
+          "elapsedMs": 7583,
+          "mainThreadMs": 851.886,
+          "scriptMs": 29.444,
+          "layoutCount": 62,
+          "forcedLayoutCount": 47,
+          "paintEvents": 257,
+          "longTasks": 0,
+          "rafP95Ms": 16.8,
+          "rafMaxMs": 16.8,
+          "rafOver25Ms": 0,
+          "traceDroppedFrameEvents": 35,
+          "tracePartialFrameEvents": 33
+        },
+        {
+          "run": 3,
+          "distanceCssPx": 4236,
+          "elapsedMs": 7601,
+          "mainThreadMs": 881.321,
+          "scriptMs": 33.82,
+          "layoutCount": 62,
+          "forcedLayoutCount": 47,
+          "paintEvents": 256,
+          "longTasks": 0,
+          "rafP95Ms": 16.8,
+          "rafMaxMs": 16.8,
+          "rafOver25Ms": 0,
+          "traceDroppedFrameEvents": 36,
+          "tracePartialFrameEvents": 34
+        }
+      ],
+      "after": [
+        {
+          "run": 1,
+          "distanceCssPx": 4236,
+          "elapsedMs": 7592,
+          "mainThreadMs": 852.289,
+          "scriptMs": 24.424,
+          "layoutCount": 61,
+          "forcedLayoutCount": 0,
+          "paintEvents": 231,
+          "longTasks": 0,
+          "rafP95Ms": 16.7,
+          "rafMaxMs": 16.8,
+          "rafOver25Ms": 0,
+          "traceDroppedFrameEvents": 31,
+          "tracePartialFrameEvents": 31
+        },
+        {
+          "run": 2,
+          "distanceCssPx": 4236,
+          "elapsedMs": 7587,
+          "mainThreadMs": 811.25,
+          "scriptMs": 11.245,
+          "layoutCount": 62,
+          "forcedLayoutCount": 0,
+          "paintEvents": 232,
+          "longTasks": 0,
+          "rafP95Ms": 16.7,
+          "rafMaxMs": 16.8,
+          "rafOver25Ms": 0,
+          "traceDroppedFrameEvents": 32,
+          "tracePartialFrameEvents": 30
+        },
+        {
+          "run": 3,
+          "distanceCssPx": 4236,
+          "elapsedMs": 7599,
+          "mainThreadMs": 741.818,
+          "scriptMs": 11.824,
+          "layoutCount": 61,
+          "forcedLayoutCount": 0,
+          "paintEvents": 231,
+          "longTasks": 0,
+          "rafP95Ms": 16.7,
+          "rafMaxMs": 16.8,
+          "rafOver25Ms": 0,
+          "traceDroppedFrameEvents": 35,
+          "tracePartialFrameEvents": 33
+        }
+      ]
+    },
+    {
+      "device": "mobile",
+      "cpuSlowdown": 4,
+      "viewport": {
+        "width": 393,
+        "height": 851
+      },
+      "browser": "154.0.8037.93",
+      "before": [
+        {
+          "run": 1,
+          "distanceCssPx": 4398,
+          "elapsedMs": 7852,
+          "mainThreadMs": 496.33,
+          "scriptMs": 26.031,
+          "layoutCount": 52,
+          "forcedLayoutCount": 38,
+          "paintEvents": 160,
+          "longTasks": 0,
+          "rafP95Ms": 16.7,
+          "rafMaxMs": 16.8,
+          "rafOver25Ms": 0,
+          "traceDroppedFrameEvents": 39,
+          "tracePartialFrameEvents": 37
+        },
+        {
+          "run": 2,
+          "distanceCssPx": 4398,
+          "elapsedMs": 7867,
+          "mainThreadMs": 479.435,
+          "scriptMs": 24.162,
+          "layoutCount": 51,
+          "forcedLayoutCount": 39,
+          "paintEvents": 166,
+          "longTasks": 0,
+          "rafP95Ms": 16.8,
+          "rafMaxMs": 16.8,
+          "rafOver25Ms": 0,
+          "traceDroppedFrameEvents": 40,
+          "tracePartialFrameEvents": 38
+        },
+        {
+          "run": 3,
+          "distanceCssPx": 4398,
+          "elapsedMs": 7874,
+          "mainThreadMs": 474.124,
+          "scriptMs": 23.434,
+          "layoutCount": 52,
+          "forcedLayoutCount": 39,
+          "paintEvents": 169,
+          "longTasks": 0,
+          "rafP95Ms": 16.8,
+          "rafMaxMs": 16.8,
+          "rafOver25Ms": 0,
+          "traceDroppedFrameEvents": 38,
+          "tracePartialFrameEvents": 36
+        }
+      ],
+      "after": [
+        {
+          "run": 1,
+          "distanceCssPx": 4398,
+          "elapsedMs": 7838,
+          "mainThreadMs": 500.668,
+          "scriptMs": 13.428,
+          "layoutCount": 50,
+          "forcedLayoutCount": 0,
+          "paintEvents": 144,
+          "longTasks": 0,
+          "rafP95Ms": 16.7,
+          "rafMaxMs": 16.8,
+          "rafOver25Ms": 0,
+          "traceDroppedFrameEvents": 34,
+          "tracePartialFrameEvents": 32
+        },
+        {
+          "run": 2,
+          "distanceCssPx": 4398,
+          "elapsedMs": 7844,
+          "mainThreadMs": 456.394,
+          "scriptMs": 20.215,
+          "layoutCount": 50,
+          "forcedLayoutCount": 0,
+          "paintEvents": 148,
+          "longTasks": 0,
+          "rafP95Ms": 16.7,
+          "rafMaxMs": 16.8,
+          "rafOver25Ms": 0,
+          "traceDroppedFrameEvents": 33,
+          "tracePartialFrameEvents": 31
+        },
+        {
+          "run": 3,
+          "distanceCssPx": 4398,
+          "elapsedMs": 7852,
+          "mainThreadMs": 458.473,
+          "scriptMs": 15.393,
+          "layoutCount": 51,
+          "forcedLayoutCount": 0,
+          "paintEvents": 152,
+          "longTasks": 0,
+          "rafP95Ms": 16.8,
+          "rafMaxMs": 16.8,
+          "rafOver25Ms": 0,
+          "traceDroppedFrameEvents": 33,
+          "tracePartialFrameEvents": 31
+        }
+      ]
+    },
+    {
+      "device": "mobile",
+      "cpuSlowdown": 6,
+      "viewport": {
+        "width": 393,
+        "height": 851
+      },
+      "browser": "154.0.8037.93",
+      "before": [
+        {
+          "run": 1,
+          "distanceCssPx": 4398,
+          "elapsedMs": 7874,
+          "mainThreadMs": 910.546,
+          "scriptMs": 49.228,
+          "layoutCount": 52,
+          "forcedLayoutCount": 40,
+          "paintEvents": 162,
+          "longTasks": 0,
+          "rafP95Ms": 16.8,
+          "rafMaxMs": 16.8,
+          "rafOver25Ms": 0,
+          "traceDroppedFrameEvents": 36,
+          "tracePartialFrameEvents": 34
+        },
+        {
+          "run": 2,
+          "distanceCssPx": 4398,
+          "elapsedMs": 7854,
+          "mainThreadMs": 736.354,
+          "scriptMs": 31.185,
+          "layoutCount": 53,
+          "forcedLayoutCount": 39,
+          "paintEvents": 168,
+          "longTasks": 0,
+          "rafP95Ms": 16.7,
+          "rafMaxMs": 16.8,
+          "rafOver25Ms": 0,
+          "traceDroppedFrameEvents": 38,
+          "tracePartialFrameEvents": 36
+        },
+        {
+          "run": 3,
+          "distanceCssPx": 4398,
+          "elapsedMs": 7881,
+          "mainThreadMs": 711.61,
+          "scriptMs": 32.948,
+          "layoutCount": 52,
+          "forcedLayoutCount": 40,
+          "paintEvents": 167,
+          "longTasks": 0,
+          "rafP95Ms": 16.8,
+          "rafMaxMs": 16.8,
+          "rafOver25Ms": 0,
+          "traceDroppedFrameEvents": 37,
+          "tracePartialFrameEvents": 35
+        }
+      ],
+      "after": [
+        {
+          "run": 1,
+          "distanceCssPx": 4398,
+          "elapsedMs": 7857,
+          "mainThreadMs": 655.265,
+          "scriptMs": 13.505,
+          "layoutCount": 50,
+          "forcedLayoutCount": 0,
+          "paintEvents": 144,
+          "longTasks": 0,
+          "rafP95Ms": 16.7,
+          "rafMaxMs": 16.8,
+          "rafOver25Ms": 0,
+          "traceDroppedFrameEvents": 34,
+          "tracePartialFrameEvents": 32
+        },
+        {
+          "run": 2,
+          "distanceCssPx": 4398,
+          "elapsedMs": 7842,
+          "mainThreadMs": 675.984,
+          "scriptMs": 10.82,
+          "layoutCount": 50,
+          "forcedLayoutCount": 0,
+          "paintEvents": 153,
+          "longTasks": 0,
+          "rafP95Ms": 16.7,
+          "rafMaxMs": 16.8,
+          "rafOver25Ms": 0,
+          "traceDroppedFrameEvents": 35,
+          "tracePartialFrameEvents": 33
+        },
+        {
+          "run": 3,
+          "distanceCssPx": 4398,
+          "elapsedMs": 7884,
+          "mainThreadMs": 697.288,
+          "scriptMs": 15.872,
+          "layoutCount": 50,
+          "forcedLayoutCount": 0,
+          "paintEvents": 152,
+          "longTasks": 0,
+          "rafP95Ms": 16.7,
+          "rafMaxMs": 16.8,
+          "rafOver25Ms": 0,
+          "traceDroppedFrameEvents": 35,
+          "tracePartialFrameEvents": 33
+        }
+      ]
+    },
+    {
+      "device": "tablet",
+      "cpuSlowdown": 6,
+      "viewport": {
+        "width": 768,
+        "height": 1024
+      },
+      "browser": "154.0.8037.93",
+      "before": [
+        {
+          "run": 1,
+          "distanceCssPx": 4213,
+          "elapsedMs": 7538,
+          "mainThreadMs": 799.578,
+          "scriptMs": 36.268,
+          "layoutCount": 62,
+          "forcedLayoutCount": 42,
+          "paintEvents": 207,
+          "longTasks": 0,
+          "rafP95Ms": 16.8,
+          "rafMaxMs": 33.4,
+          "rafOver25Ms": 12,
+          "traceDroppedFrameEvents": 60,
+          "tracePartialFrameEvents": 58
+        },
+        {
+          "run": 2,
+          "distanceCssPx": 4213,
+          "elapsedMs": 7501,
+          "mainThreadMs": 778.272,
+          "scriptMs": 27.682,
+          "layoutCount": 63,
+          "forcedLayoutCount": 43,
+          "paintEvents": 217,
+          "longTasks": 0,
+          "rafP95Ms": 16.8,
+          "rafMaxMs": 33.4,
+          "rafOver25Ms": 12,
+          "traceDroppedFrameEvents": 55,
+          "tracePartialFrameEvents": 55
+        },
+        {
+          "run": 3,
+          "distanceCssPx": 4213,
+          "elapsedMs": 7541,
+          "mainThreadMs": 856.054,
+          "scriptMs": 40.133,
+          "layoutCount": 63,
+          "forcedLayoutCount": 42,
+          "paintEvents": 213,
+          "longTasks": 0,
+          "rafP95Ms": 16.8,
+          "rafMaxMs": 33.4,
+          "rafOver25Ms": 12,
+          "traceDroppedFrameEvents": 58,
+          "tracePartialFrameEvents": 56
+        }
+      ],
+      "after": [
+        {
+          "run": 1,
+          "distanceCssPx": 4213,
+          "elapsedMs": 7526,
+          "mainThreadMs": 747.248,
+          "scriptMs": 13.969,
+          "layoutCount": 61,
+          "forcedLayoutCount": 0,
+          "paintEvents": 188,
+          "longTasks": 0,
+          "rafP95Ms": 16.8,
+          "rafMaxMs": 33.4,
+          "rafOver25Ms": 11,
+          "traceDroppedFrameEvents": 53,
+          "tracePartialFrameEvents": 53
+        },
+        {
+          "run": 2,
+          "distanceCssPx": 4213,
+          "elapsedMs": 7532,
+          "mainThreadMs": 694.251,
+          "scriptMs": 10.489,
+          "layoutCount": 60,
+          "forcedLayoutCount": 0,
+          "paintEvents": 199,
+          "longTasks": 0,
+          "rafP95Ms": 16.8,
+          "rafMaxMs": 33.4,
+          "rafOver25Ms": 11,
+          "traceDroppedFrameEvents": 50,
+          "tracePartialFrameEvents": 50
+        },
+        {
+          "run": 3,
+          "distanceCssPx": 4213,
+          "elapsedMs": 7527,
+          "mainThreadMs": 736.384,
+          "scriptMs": 15.752,
+          "layoutCount": 60,
+          "forcedLayoutCount": 0,
+          "paintEvents": 195,
+          "longTasks": 0,
+          "rafP95Ms": 16.8,
+          "rafMaxMs": 33.4,
+          "rafOver25Ms": 11,
+          "traceDroppedFrameEvents": 52,
+          "tracePartialFrameEvents": 52
+        }
+      ]
+    }
+  ],
+  "visualComparisons": [
+    {
+      "region": "creator",
+      "width": 1440,
+      "phase": 2000,
+      "changedPixels": 0,
+      "totalPixels": 1225440,
+      "maxChannelDifference": 0,
+      "meanChannelDifference": 0
+    },
+    {
+      "region": "contact",
+      "width": 1440,
+      "phase": 0,
+      "changedPixels": 372255,
+      "totalPixels": 1225440,
+      "maxChannelDifference": 1,
+      "meanChannelDifference": 0.11486187274230752
+    },
+    {
+      "region": "contact",
+      "width": 1440,
+      "phase": 2000,
+      "changedPixels": 372729,
+      "totalPixels": 1225440,
+      "maxChannelDifference": 1,
+      "meanChannelDifference": 0.11508573791182487
+    },
+    {
+      "region": "contact",
+      "width": 1440,
+      "phase": 4000,
+      "changedPixels": 372081,
+      "totalPixels": 1225440,
+      "maxChannelDifference": 1,
+      "meanChannelDifference": 0.11516516516516516
+    },
+    {
+      "region": "creator",
+      "width": 768,
+      "phase": 2000,
+      "changedPixels": 0,
+      "totalPixels": 653568,
+      "maxChannelDifference": 0,
+      "meanChannelDifference": 0
+    },
+    {
+      "region": "contact",
+      "width": 768,
+      "phase": 0,
+      "changedPixels": 548854,
+      "totalPixels": 653568,
+      "maxChannelDifference": 1,
+      "meanChannelDifference": 0.4784862987987988
+    },
+    {
+      "region": "contact",
+      "width": 768,
+      "phase": 2000,
+      "changedPixels": 541688,
+      "totalPixels": 653568,
+      "maxChannelDifference": 1,
+      "meanChannelDifference": 0.4801076552095574
+    },
+    {
+      "region": "contact",
+      "width": 768,
+      "phase": 4000,
+      "changedPixels": 542751,
+      "totalPixels": 653568,
+      "maxChannelDifference": 1,
+      "meanChannelDifference": 0.478691327196762
+    },
+    {
+      "region": "creator",
+      "width": 393,
+      "phase": 2000,
+      "changedPixels": 0,
+      "totalPixels": 334443,
+      "maxChannelDifference": 0,
+      "meanChannelDifference": 0
+    },
+    {
+      "region": "contact",
+      "width": 393,
+      "phase": 0,
+      "changedPixels": 273378,
+      "totalPixels": 334443,
+      "maxChannelDifference": 2,
+      "meanChannelDifference": 0.4852067467401022
+    },
+    {
+      "region": "contact",
+      "width": 393,
+      "phase": 2000,
+      "changedPixels": 268513,
+      "totalPixels": 334443,
+      "maxChannelDifference": 2,
+      "meanChannelDifference": 0.5259730357639418
+    },
+    {
+      "region": "contact",
+      "width": 393,
+      "phase": 4000,
+      "changedPixels": 268772,
+      "totalPixels": 334443,
+      "maxChannelDifference": 2,
+      "meanChannelDifference": 0.5408066546466812
+    }
+  ],
+  "additionalSmokeRuns": [
+    {
+      "name": "headed-after",
+      "repeats": 1,
+      "device": "mobile",
+      "rate": 6,
+      "scrollInput": "mouse",
+      "route": {
+        "start": 3080,
+        "end": 7495,
+        "distance": 4415,
+        "viewport": [
+          393,
+          851
+        ]
+      },
+      "elapsedMs": 7846,
+      "mainThreadMs": 835.103,
+      "scriptMs": 19.367,
+      "forcedLayouts": 0,
+      "longTasks": 0,
+      "rafP95Ms": 17.5,
+      "rafMaxMs": 17.7,
+      "rafOver25Ms": 0,
+      "endScrollY": 7495
+    },
+    {
+      "name": "headed-before",
+      "repeats": 1,
+      "device": "mobile",
+      "rate": 6,
+      "scrollInput": "mouse",
+      "route": {
+        "start": 3080,
+        "end": 7474,
+        "distance": 4394,
+        "viewport": [
+          393,
+          851
+        ]
+      },
+      "elapsedMs": 7812,
+      "mainThreadMs": 827.221,
+      "scriptMs": 40.414,
+      "forcedLayouts": 39,
+      "longTasks": 0,
+      "rafP95Ms": 17.5,
+      "rafMaxMs": 17.7,
+      "rafOver25Ms": 0,
+      "endScrollY": 7474
+    },
+    {
+      "name": "touch-after-mobile4",
+      "repeats": 1,
+      "device": "mobile",
+      "rate": 4,
+      "scrollInput": "touch",
+      "route": {
+        "start": 3080,
+        "end": 7478,
+        "distance": 4398,
+        "viewport": [
+          393,
+          851
+        ]
+      },
+      "elapsedMs": 8087,
+      "mainThreadMs": 448.123,
+      "scriptMs": 11.368,
+      "forcedLayouts": 0,
+      "longTasks": 0,
+      "rafP95Ms": 16.7,
+      "rafMaxMs": 16.8,
+      "rafOver25Ms": 0,
+      "endScrollY": 7470
+    },
+    {
+      "name": "touch-after-mobile6",
+      "repeats": 1,
+      "device": "mobile",
+      "rate": 6,
+      "scrollInput": "touch",
+      "route": {
+        "start": 3080,
+        "end": 7478,
+        "distance": 4398,
+        "viewport": [
+          393,
+          851
+        ]
+      },
+      "elapsedMs": 8106,
+      "mainThreadMs": 632.399,
+      "scriptMs": 13.445,
+      "forcedLayouts": 0,
+      "longTasks": 0,
+      "rafP95Ms": 16.7,
+      "rafMaxMs": 16.8,
+      "rafOver25Ms": 0,
+      "endScrollY": 7484
+    },
+    {
+      "name": "touch-after-tablet6",
+      "repeats": 1,
+      "device": "tablet",
+      "rate": 6,
+      "scrollInput": "touch",
+      "route": {
+        "start": 3432,
+        "end": 7645,
+        "distance": 4213,
+        "viewport": [
+          768,
+          1024
+        ]
+      },
+      "elapsedMs": 7778,
+      "mainThreadMs": 707.174,
+      "scriptMs": 13.797,
+      "forcedLayouts": 0,
+      "longTasks": 0,
+      "rafP95Ms": 16.8,
+      "rafMaxMs": 33.4,
+      "rafOver25Ms": 11,
+      "endScrollY": 7645
+    },
+    {
+      "name": "touch-before-mobile4",
+      "repeats": 1,
+      "device": "mobile",
+      "rate": 4,
+      "scrollInput": "touch",
+      "route": {
+        "start": 3080,
+        "end": 7478,
+        "distance": 4398,
+        "viewport": [
+          393,
+          851
+        ]
+      },
+      "elapsedMs": 8093,
+      "mainThreadMs": 515.081,
+      "scriptMs": 28.818,
+      "forcedLayouts": 40,
+      "longTasks": 0,
+      "rafP95Ms": 16.7,
+      "rafMaxMs": 16.8,
+      "rafOver25Ms": 0,
+      "endScrollY": 7477
+    },
+    {
+      "name": "touch-before-mobile6",
+      "repeats": 1,
+      "device": "mobile",
+      "rate": 6,
+      "scrollInput": "touch",
+      "route": {
+        "start": 3080,
+        "end": 7478,
+        "distance": 4398,
+        "viewport": [
+          393,
+          851
+        ]
+      },
+      "elapsedMs": 8087,
+      "mainThreadMs": 676.745,
+      "scriptMs": 31.11,
+      "forcedLayouts": 38,
+      "longTasks": 0,
+      "rafP95Ms": 16.7,
+      "rafMaxMs": 16.8,
+      "rafOver25Ms": 0,
+      "endScrollY": 7478
+    },
+    {
+      "name": "touch-before-tablet6",
+      "repeats": 1,
+      "device": "tablet",
+      "rate": 6,
+      "scrollInput": "touch",
+      "route": {
+        "start": 3432,
+        "end": 7645,
+        "distance": 4213,
+        "viewport": [
+          768,
+          1024
+        ]
+      },
+      "elapsedMs": 7814,
+      "mainThreadMs": 791.888,
+      "scriptMs": 32.751,
+      "forcedLayouts": 40,
+      "longTasks": 0,
+      "rafP95Ms": 16.8,
+      "rafMaxMs": 33.4,
+      "rafOver25Ms": 12,
+      "endScrollY": 7638
+    }
+  ]
+}

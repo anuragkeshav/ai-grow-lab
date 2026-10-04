@@ -59,19 +59,31 @@
       .scroll-progress {
         position: fixed; top: 0; left: 0; height: 3px; z-index: 1001;
         background: linear-gradient(90deg, var(--acid), var(--coral), var(--lavender));
-        width: 0%; transition: width 60ms linear;
+        width: 100%; transform: scaleX(0); transform-origin: left;
+        transition: transform 60ms linear;
         box-shadow: 0 0 12px var(--acid), 0 0 4px var(--acid);
       }
+      @supports (animation-timeline: scroll()) {
+        .scroll-progress {
+          animation: scroll-progress 1s linear both;
+          animation-timeline: scroll(root block);
+          transition: none;
+        }
+        @keyframes scroll-progress { to { transform: scaleX(1); } }
+      }
 
+      /* Invisible threshold ranges: observers replace per-frame scroll/layout reads. */
+      .scroll-boundary { position: absolute; top: 0; left: 0; width: 1px; pointer-events: none; visibility: hidden; }
       .site-shell { overflow: hidden; position: relative; }
       .container { width: min(1220px, calc(100% - 48px)); margin: 0 auto; }
 
       .eyebrow {
-        display: flex; gap: 10px; align-items: center;
+        display: flex; gap: 10px; align-items: center; position: relative;
         font: 500 11px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase;
       }
-      .eyebrow::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--acid); border: 1px solid var(--ink); animation: pulse-dot 2.4s ease infinite; }
-      @keyframes pulse-dot { 0%,100%{ box-shadow:0 0 0 0 rgba(216,255,78,.5); } 50%{ box-shadow:0 0 0 7px rgba(216,255,78,0); } }
+      .eyebrow::before { content: ""; width: 8px; height: 8px; flex-shrink: 0; border-radius: 50%; background: var(--acid); border: 1px solid var(--ink); position: relative; z-index: 1; }
+      .eyebrow::after { content: ""; position: absolute; left: 0; top: 50%; width: 8px; height: 8px; border-radius: 50%; background: var(--acid); pointer-events: none; animation: pulse-dot 2.4s ease infinite; }
+      @keyframes pulse-dot { 0%,100%{ transform:translate3d(0,-50%,0) scale(1); opacity:.5; } 50%{ transform:translate3d(0,-50%,0) scale(2.75); opacity:0; } }
 
       .rule { border: 0; border-top: 1px solid var(--line); margin: 0; }
       .display {
@@ -151,14 +163,14 @@
         border-bottom: 1px solid rgba(17,17,15,.05);
       }
       .nav-wrap::before {
-        content: ""; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+        content: ""; position: absolute; top: 0; left: 0; width: 200%; height: 2px;
         background: linear-gradient(90deg, transparent, var(--acid), var(--coral), var(--acid), transparent);
-        background-size: 200% 100%;
         animation: nav-accent 4s ease infinite;
+        animation-play-state: paused;
         opacity: 0; transition: opacity .4s ease;
       }
-      .nav-wrap.scrolled::before { opacity: 1; }
-      @keyframes nav-accent { 0%,100%{ background-position: 0% 50%; } 50%{ background-position: 100% 50%; } }
+      .nav-wrap.scrolled::before { opacity: 1; animation-play-state: running; }
+      @keyframes nav-accent { 0%,100%{ transform:translate3d(0,0,0); } 50%{ transform:translate3d(-50%,0,0); } }
       .nav-wrap.scrolled {
         background: rgba(245,241,232,.65);
         box-shadow: 0 8px 40px rgba(17,17,15,.07), 0 1.5px 4px rgba(17,17,15,.05);
@@ -197,15 +209,19 @@
       .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; }
 
       .visual-board { position: absolute; inset: 7% 0 0 5%; background: var(--ink); overflow: hidden; }
-      .visual-board::before {
-        content: ""; position: absolute; width: 76%; height: 76%; border-radius: 50%; top: -21%; right: -14%;
-        background: var(--acid);
+      .board-glow {
+        position: absolute; width: 76%; height: 76%; top: -21%; right: -14%;
         animation: board-glow 5s ease-in-out infinite alternate;
       }
+      .board-glow::before, .board-glow::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: var(--acid); }
+      .board-glow::before { animation: glow-sharp 5s ease-in-out infinite alternate; }
+      .board-glow::after { filter: blur(8px); animation: glow-soft 5s ease-in-out infinite alternate; }
       @keyframes board-glow {
-        0% { filter: blur(0px); transform: scale(1); }
-        100% { filter: blur(8px); transform: scale(1.06); }
+        0% { transform: scale(1); }
+        100% { transform: scale(1.06); }
       }
+      @keyframes glow-sharp { from { opacity: 1; } to { opacity: 0; } }
+      @keyframes glow-soft { from { opacity: 0; } to { opacity: 1; } }
       .visual-board::after {
         content: "CREATOR\A GROWTH"; white-space: pre; position: absolute; right: 8%; top: 20%; color: var(--ink);
         font-size: clamp(2.5rem, 4.5vw, 4.8rem); font-weight: 800; letter-spacing: -.1em; line-height: .83; text-align: right;
@@ -233,12 +249,12 @@
       .card-one { left: -6%; top: 9%; animation: float-one 5s ease-in-out infinite; }
       .card-two { right: -4%; bottom: 12%; background: var(--acid); animation: float-two 6s ease-in-out infinite; }
       @keyframes float-one {
-        0%,100% { transform: rotate(-4deg) translateY(0); }
-        50% { transform: rotate(-3deg) translateY(-12px); }
+        0%,100% { transform: rotate(-4deg) translate3d(0,0,0); }
+        50% { transform: rotate(-3deg) translate3d(0,-12px,0); }
       }
       @keyframes float-two {
-        0%,100% { transform: rotate(4deg) translateY(0); }
-        50% { transform: rotate(5deg) translateY(-10px); }
+        0%,100% { transform: rotate(4deg) translate3d(0,0,0); }
+        50% { transform: rotate(5deg) translate3d(0,-10px,0); }
       }
       .scroll-note { margin-top: 42px; display: flex; gap: 13px; align-items: center; font: 500 10px var(--mono); text-transform: uppercase; letter-spacing: .1em; }
       .scroll-note::before {
@@ -337,12 +353,12 @@
         transition: background .3s ease, padding .3s ease, border-color .3s ease;
       }
       .service::after {
-        content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
+        content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
         background: linear-gradient(90deg, transparent, rgba(255,255,255,.18), transparent);
-        transition: left .6s ease;
+        transform: translate3d(-100%,0,0); transition: transform .6s ease;
       }
       .service:hover { background: var(--acid); padding: 0 16px; border-color: var(--acid); }
-      .service:hover::after { left: 100%; }
+      .service:hover::after { transform: translate3d(100%,0,0); }
       .service-index { font: 500 11px var(--mono); transition: transform .3s ease; }
       .service:hover .service-index { transform: translateX(4px); }
       .service h3 { margin: 0; font-size: clamp(1.5rem, 2.3vw, 2.5rem); letter-spacing: -.07em; }
@@ -398,10 +414,13 @@
       .selection-brief p { margin:0; max-width:205px; color:rgba(17,17,15,.65); font-size:.82rem; line-height:1.55; }
       .signal {
         position:absolute; z-index:1; background:var(--paper); border:1px solid var(--ink); padding:18px;
-        box-shadow: 7px 7px 0 var(--ink);
-        transition: transform .35s cubic-bezier(.2,.8,.2,1), box-shadow .35s ease;
+        --signal-shadow: var(--ink);
+        box-shadow: 7px 7px 0 var(--signal-shadow);
+        transition: transform .35s cubic-bezier(.2,.8,.2,1);
       }
-      .signal:hover { transform:translate(-5px, -7px) rotate(-1.3deg); box-shadow: 14px 15px 0 var(--ink); }
+      .signal::before { content: ""; position: absolute; inset: -1px; box-shadow: 14px 15px 0 var(--signal-shadow); opacity: 0; pointer-events: none; transition: opacity .35s ease; }
+      .signal:hover { transform:translate3d(-5px,-7px,0) rotate(-1.3deg); }
+      .signal:hover::before { opacity: 1; }
       .signal-top { display:flex; justify-content:space-between; align-items:center; font:500 10px var(--mono); letter-spacing:.08em; }
       .signal-mark {
         width:22px; height:22px; display:grid; place-items:center; border-radius:50%; background:var(--acid);
@@ -414,8 +433,7 @@
       .signal:hover::after { opacity: .25; }
       .signal-audience { width:27%; right:8%; top:47px; background:var(--acid); transform:rotate(2deg); }
       .signal-content { width:28%; left:28%; top:174px; transform:rotate(-2deg); }
-      .signal-authenticity { width:24%; right:1%; top:285px; background:var(--ink); color:var(--paper); transform:rotate(2deg); box-shadow:7px 7px 0 var(--coral); }
-      .signal-authenticity:hover { box-shadow: 14px 15px 0 var(--coral); }
+      .signal-authenticity { --signal-shadow: var(--coral); width:24%; right:1%; top:285px; background:var(--ink); color:var(--paper); transform:rotate(2deg); }
       .signal-authenticity p { color:rgba(245,241,232,.7); }
       .signal-authenticity::after { background:var(--acid); opacity:.7; }
       .signal-fit { width:29%; left:11%; bottom:55px; transform:rotate(1deg); background:var(--coral); }
@@ -467,11 +485,19 @@
 
       /* ══════ CONTACT ══════ */
       .contact {
-        background: linear-gradient(135deg, var(--acid) 0%, #c6f02e 50%, #e8ff8a 100%);
-        background-size: 200% 200%; animation: contact-shift 8s ease infinite;
+        background: var(--acid); isolation: isolate;
         padding:clamp(86px, 11vw, 148px) 0; position: relative; overflow: hidden;
       }
-      @keyframes contact-shift { 0%{ background-position:0% 50%; } 50%{ background-position:100% 50%; } 100%{ background-position:0% 50%; } }
+      .contact-gradient { position: absolute; inset: 0; overflow: hidden; contain: paint; pointer-events: none; z-index: -1; }
+      .contact-gradient::before {
+        content: ""; position: absolute; left: 0; top: 0; width: 200%; height: 100%;
+        background: linear-gradient(135deg, var(--acid) 0%, #c6f02e 50%, #e8ff8a 100%);
+        background-size: 100% 200%; background-position: 0 50%;
+        animation: contact-shift 8s ease infinite;
+      }
+      /* Identical 2× gradient crop/travel, but half the composited layer area.
+         Background sizing is static; only the cropped layer's transform moves. */
+      @keyframes contact-shift { 0%,100%{ transform:translate3d(0,0,0); } 50%{ transform:translate3d(-50%,0,0); } }
       .contact::before {
         content: "LET'S TALK"; position: absolute; right: -4%; top: 50%; transform: translateY(-50%);
         font-size: clamp(6rem, 18vw, 18rem); font-weight: 800; letter-spacing: -.12em; line-height: .7;
@@ -485,13 +511,18 @@
         transition: border-color .2s ease, padding .2s ease;
       }
       .contact-links a:hover { border-bottom-width: 2px; padding-bottom: 3px; }
-      .contact-form { border-top:1px solid var(--ink); }
+      .contact-form { border-top:1px solid var(--ink); contain: layout style; }
+      .form-title { margin: 22px 0 10px; font-size: clamp(1.4rem, 2.4vw, 2rem); letter-spacing: -.065em; line-height: 1.05; }
+      .form-support { margin: 22px 0 14px; font-size: .85rem; line-height: 1.55; max-width: 390px; }
+      .button.discovery-submit { display: flex; width: 100%; justify-content: space-between; padding: 20px; font-size: 1rem; text-align: left; }
+      .discovery-submit:focus-visible { outline: 2px solid var(--ink); outline-offset: 4px; }
+      .discovery-submit:disabled { cursor: wait; }
       .field { padding: 15px 0; border-bottom:1px solid rgba(17,17,15,.35); position: relative; }
       .field::after {
-        content: ""; position: absolute; bottom: 0; left: 0; width: 0; height: 2px;
-        background: var(--ink); transition: width .4s ease;
+        content: ""; position: absolute; bottom: 0; left: 0; width: 100%; height: 2px;
+        background: var(--ink); transform: scaleX(0); transform-origin: left; transition: transform .4s ease;
       }
-      .field:focus-within::after { width: 100%; }
+      .field:focus-within::after { transform: scaleX(1); }
       .field label { display:block; font: 500 10px var(--mono); letter-spacing:.09em; text-transform:uppercase; margin-bottom: 8px; transition: color .2s ease; }
       .field:focus-within label { color: rgba(17,17,15,.9); }
       .field input, .field select, .field textarea { border:0; border-radius:0; background:transparent; outline:0; padding:3px 0; width:100%; color:var(--ink); font-size: .95rem; }
@@ -499,7 +530,7 @@
       .field textarea { min-height:74px; resize:vertical; }
       .form-note { margin: 14px 0 0; font-size: .75rem; line-height:1.5; color:rgba(17,17,15,.68); }
       .form-status { margin: 14px 0 0; min-height: 20px; font-size:.82rem; font-weight:700; }
-      .honeypot { position:absolute; left:-10000px; width:1px; height:1px; overflow:hidden; }
+      .honeypot { position:absolute; left:0; top:0; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
 
       /* ══════ FOOTER ══════ */
       footer { background:var(--ink); color:var(--paper); padding: 35px 0 25px; }
@@ -535,6 +566,24 @@
       .stagger > *:nth-child(3) { transition-delay: .16s; }
       .stagger > *:nth-child(4) { transition-delay: .24s; }
       .stagger > *:nth-child(5) { transition-delay: .32s; }
+
+      /* Hints exist only for the duration of a reveal, never on every card. */
+      [data-r].revealing { will-change: transform, opacity; }
+      /* Identity -> none must NOT start a second, invisible 700ms transition.
+         It otherwise re-lays out overflow and repaints native form controls. */
+      [data-r].in.revealed { transform: none; transition: none; }
+      .hero.motion-paused::before,
+      .hero.motion-paused .board-glow,
+      .hero.motion-paused .board-glow::before,
+      .hero.motion-paused .board-glow::after,
+      .hero.motion-paused .orbit,
+      .hero.motion-paused .floating-card,
+      .hero.motion-paused .hero-badge-dot,
+      .hero.motion-paused .scroll-note::before,
+      .marquee-strip.motion-paused .marquee-track,
+      .contact.motion-paused .contact-gradient::before,
+      .nav-wrap.motion-paused::before,
+      .eyebrow.motion-paused::after { animation-play-state: paused; }
 
       /* ══════ RESPONSIVE ══════ */
       @media (max-width: 900px) {
@@ -652,6 +701,15 @@
         .hero-visual { animation: hero-rise .9s .18s cubic-bezier(.2,.8,.2,1) both; }
         @keyframes hero-rise { from { opacity:0; transform:translateY(32px); } to { opacity:1; transform:translateY(0); } }
       }
+      @media (prefers-reduced-motion: reduce) {
+        html { scroll-behavior: auto; }
+        *, *::before, *::after { animation: none !important; transition: none !important; }
+        [data-r] { opacity: 1; transform: none !important; will-change: auto !important; }
+        .preloader-text span { opacity: 1; transform: none; }
+        .card-one { transform: rotate(-4deg); }
+        .card-two { transform: rotate(4deg); }
+        .eyebrow::after, .board-glow::after { opacity: 0; }
+      }
     </style>
   </head>
   <body>
@@ -704,6 +762,7 @@
             </div>
             <div class="hero-visual" aria-label="An abstract AI Grow Lab campaign strategy composition">
               <div class="visual-board">
+                <span class="board-glow" aria-hidden="true"></span>
                 <span class="board-label"><b>01/</b> Built for relevance, not reach</span>
                 <span class="orbit"></span>
               </div>
@@ -886,27 +945,30 @@
 
         <!-- CONTACT -->
         <section class="contact" id="contact">
+          <span class="contact-gradient" aria-hidden="true"></span>
           <div class="container contact-grid">
             <div data-r="left">
               <p class="eyebrow">Start here</p>
               <h2 class="section-title">Let's make your next campaign <span class="serif">count.</span></h2>
               <p class="section-intro">Tell us where you are now and where you want to get to. We'll use it to make the first conversation useful.</p>
               <div class="contact-links" aria-label="AI Grow Lab contact links">
-                <a href="mailto:buisness@aigrowlabs.media">buisness@aigrowlabs.media</a>
+                <a href="mailto:business@aigrowlabs.media">business@aigrowlabs.media</a>
                 <a href="https://instagram.com/aigrowlabs.media" target="_blank" rel="noreferrer">Instagram ↗</a>
               </div>
             </div>
-            <form class="contact-form" id="contact-form" onsubmit="event.preventDefault();" data-r="right">
-              <div class="honeypot" aria-hidden="true"><label for="website">Website</label><input id="website" name="website" tabindex="-1" autocomplete="off" /></div>
-              <div class="field"><label for="name">Your name</label><input id="name" name="name" required placeholder="Name" /></div>
-              <div class="field"><label for="company">Brand / company</label><input id="company" name="company" required placeholder="Company name" /></div>
-              <div class="field"><label for="email">Work email</label><input id="email" name="email" type="email" required placeholder="you@company.com" /></div>
-              <div class="field"><label for="goal">What are you trying to achieve?</label><select id="goal" name="goal"><option>Launch a product</option><option>Build brand awareness</option><option>Create UGC</option><option>Develop creator partnerships</option><option>Something else</option></select></div>
-              <div class="field"><label for="message">A little context</label><textarea id="message" name="message" placeholder="Brand, audience, timing, challenge…"></textarea></div>
-              <button class="button primary" type="submit" id="submit-lead">Request a discovery call <span class="arrow">↗</span></button>
-              <p class="form-note">We'll reply within 24 hours. Your information is used only to respond to this request.</p>
-              <p class="form-status" aria-live="polite"></p>
-            </form>
+              <form class="contact-form" id="contact-form" aria-labelledby="discovery-title" data-r="right">
+                <h3 class="form-title" id="discovery-title">Request a Discovery Call</h3>
+                <div class="honeypot" aria-hidden="true"><label for="website">Website</label><input id="website" name="website" tabindex="-1" autocomplete="off" /></div>
+                <div class="field"><label for="name">Your name</label><input id="name" name="name" required minlength="2" maxlength="100" autocomplete="name" placeholder="Name" /></div>
+                <div class="field"><label for="company">Brand / company</label><input id="company" name="company" required minlength="2" maxlength="120" autocomplete="organization" placeholder="Company name" /></div>
+                <div class="field"><label for="email">Work email</label><input id="email" name="email" type="email" required autocomplete="email" placeholder="you@company.com" /></div>
+                <div class="field"><label for="goal">What are you trying to achieve?</label><select id="goal" name="goal"><option>Launch a product</option><option>Build brand awareness</option><option>Create UGC</option><option>Develop creator partnerships</option><option>Something else</option></select></div>
+                <div class="field"><label for="message">A little context</label><textarea id="message" name="message" maxlength="2000" placeholder="Brand, audience, timing, challenge…"></textarea></div>
+                <p class="form-support" id="discovery-support">Tell us what you're building. We'll get back to you within 24 hours.</p>
+                <button class="button primary discovery-submit" type="submit" id="submit-lead" aria-describedby="discovery-support discovery-privacy">Request a Discovery Call <span class="arrow" aria-hidden="true">↗</span></button>
+                <p class="form-note" id="discovery-privacy">Your information is used only to respond to this request.</p>
+                <p class="form-status" aria-live="polite"></p>
+              </form>
           </div>
         </section>
       </main>
@@ -941,24 +1003,88 @@
       const backTop = document.getElementById('back-top');
       const navAnchors = document.querySelectorAll('.nav-links > a:not(.button)');
       const sections = Array.from(navAnchors).map(a => document.querySelector(a.getAttribute('href'))).filter(Boolean);
-      let ticking = false;
-      window.addEventListener('scroll', () => {
-        if (!ticking) {
-          requestAnimationFrame(() => {
-            const scrollTop = window.scrollY;
-            const docHeight = document.documentElement.scrollHeight - window.innerHeight;
-            progressBar.style.width = (scrollTop / docHeight * 100) + '%';
-            navWrap.classList.toggle('scrolled', scrollTop > 40);
-            backTop.classList.toggle('show', scrollTop > 600);
-            // Scroll spy
-            let current = '';
-            sections.forEach(sec => { if (sec.offsetTop - 200 <= scrollTop) current = '#' + sec.id; });
-            navAnchors.forEach(a => a.classList.toggle('active', a.getAttribute('href') === current));
-            ticking = false;
-          });
-          ticking = true;
+      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+      const nativeScrollProgress = CSS.supports('animation-timeline: scroll()');
+      let scrollRange = 1;
+      let metricsFrame = 0;
+      let progressFrame = 0;
+      let fallbackProgress = false;
+      let lastCurrent = '';
+      // Each empty range extends from document top to a threshold. Unlike a
+      // 1px point sentinel, it also reports jumps over an entire section.
+      const boundaries = [
+        { height: 40, apply: passed => navWrap.classList.toggle('scrolled', passed) },
+        { height: 600, apply: passed => backTop.classList.toggle('show', passed) },
+        ...sections.map(section => ({ section, passed: false })),
+      ];
+      const boundaryByElement = new Map();
+      const boundaryObserver = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+          const boundary = boundaryByElement.get(entry.target);
+          boundary.passed = entry.boundingClientRect.bottom <= entry.rootBounds.top;
+          if (boundary.apply) boundary.apply(boundary.passed);
+        });
+        let current = '';
+        boundaries.forEach(boundary => {
+          if (boundary.section && boundary.passed) current = '#' + boundary.section.id;
+        });
+        if (current !== lastCurrent) {
+          navAnchors.forEach(a => a.classList.toggle('active', a.getAttribute('href') === current));
+          lastCurrent = current;
         }
-      }, { passive: true });
+      });
+      const boundaryFragment = document.createDocumentFragment();
+      boundaries.forEach(boundary => {
+        const element = document.createElement('span');
+        element.className = 'scroll-boundary';
+        element.setAttribute('aria-hidden', 'true');
+        boundary.element = element;
+        boundaryByElement.set(element, boundary);
+        boundaryFragment.append(element);
+      });
+      document.body.append(boundaryFragment);
+      function updateProgress() {
+        progressFrame = 0;
+        // Only old browsers/reduced-motion need this passive, single-RAF fallback.
+        const progress = Math.min(1, Math.max(0, window.scrollY / scrollRange));
+        progressBar.style.transform = 'scaleX(' + progress + ')';
+      }
+      function scheduleProgress() {
+        if (!progressFrame) progressFrame = requestAnimationFrame(updateProgress);
+      }
+      function updateScrollMetrics() {
+        metricsFrame = 0;
+        // Geometry is read together, only after resize/content/font changes.
+        const scrollTop = window.scrollY;
+        scrollRange = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+        const heights = boundaries.map(boundary => boundary.section
+          ? Math.max(1, boundary.section.getBoundingClientRect().top + scrollTop - 200)
+          : boundary.height);
+        boundaries.forEach((boundary, index) => {
+          boundary.element.style.height = heights[index] + 'px';
+          boundaryObserver.observe(boundary.element);
+        });
+        if (fallbackProgress) scheduleProgress();
+      }
+      function invalidateScrollMetrics() {
+        if (!metricsFrame) metricsFrame = requestAnimationFrame(updateScrollMetrics);
+      }
+      function configureProgress() {
+        fallbackProgress = !nativeScrollProgress || reducedMotion.matches;
+        window.removeEventListener('scroll', scheduleProgress);
+        cancelAnimationFrame(progressFrame);
+        progressFrame = 0;
+        if (fallbackProgress) {
+          window.addEventListener('scroll', scheduleProgress, { passive: true });
+          scheduleProgress();
+        } else progressBar.style.removeProperty('transform');
+      }
+      window.addEventListener('resize', invalidateScrollMetrics, { passive: true });
+      new ResizeObserver(invalidateScrollMetrics).observe(document.body);
+      document.fonts.ready.then(invalidateScrollMetrics);
+      reducedMotion.addEventListener('change', configureProgress);
+      configureProgress();
+      invalidateScrollMetrics();
 
       /* ══════ PRELOADER ══════ */
       window.addEventListener('load', () => {
@@ -969,36 +1095,65 @@
       document.getElementById('year').textContent = new Date().getFullYear();
 
       /* ══════ SCROLL REVEAL ══════ */
+      function finishReveal(element) {
+        element.classList.remove('revealing');
+        element.classList.add('revealed');
+      }
       const revealObserver = new IntersectionObserver((entries) => {
         entries.forEach(e => {
           if (e.isIntersecting) {
+            if (!reducedMotion.matches) e.target.classList.add('revealing');
             e.target.classList.add('in');
+            // Release temporary layers after the existing 700ms entrance.
+            if (reducedMotion.matches) finishReveal(e.target);
+            else setTimeout(() => finishReveal(e.target), 750);
             revealObserver.unobserve(e.target);
           }
         });
       }, { threshold: 0.12, rootMargin: '0px 0px -30px 0px' });
       document.querySelectorAll('[data-r]').forEach(el => revealObserver.observe(el));
 
+      /* Preserve animation phase while stopping work outside the viewport. */
+      const motionObserver = new IntersectionObserver(entries => {
+        entries.forEach(entry => entry.target.classList.toggle('motion-paused', !entry.isIntersecting));
+      }, { rootMargin: '150px' });
+      document.querySelectorAll('.hero, .marquee-strip, .contact, .nav-wrap, .eyebrow').forEach(element => motionObserver.observe(element));
+
       /* ══════ STAT COUNTER ══════ */
+      const activeCounters = new Map();
       const counterObserver = new IntersectionObserver((entries) => {
         entries.forEach(e => {
-          if (!e.isIntersecting) return;
           const el = e.target;
+          if (!e.isIntersecting) {
+            const counter = activeCounters.get(el);
+            if (counter) { cancelAnimationFrame(counter.frame); counter.finish(); }
+            return;
+          }
+          if (activeCounters.has(el)) return;
           const target = parseFloat(el.dataset.count);
           const suffix = el.dataset.suffix || '';
           const prefix = el.dataset.prefix || '';
           const decimal = parseInt(el.dataset.decimal) || 0;
           const duration = 1600;
           const start = performance.now();
+          const counter = { frame: 0, finish() {
+            el.textContent = prefix + target.toFixed(decimal) + suffix;
+            activeCounters.delete(el);
+            counterObserver.unobserve(el);
+          } };
+          if (reducedMotion.matches) { counter.finish(); return; }
+          activeCounters.set(el, counter);
           const animate = (now) => {
+            if (reducedMotion.matches) { counter.finish(); return; }
             const progress = Math.min((now - start) / duration, 1);
             const ease = 1 - Math.pow(1 - progress, 3);
             const current = (target * ease).toFixed(decimal);
-            el.textContent = prefix + current + suffix;
-            if (progress < 1) requestAnimationFrame(animate);
+            const text = prefix + current + suffix;
+            if (el.textContent !== text) el.textContent = text;
+            if (progress < 1) counter.frame = requestAnimationFrame(animate);
+            else counter.finish();
           };
-          requestAnimationFrame(animate);
-          counterObserver.unobserve(el);
+          counter.frame = requestAnimationFrame(animate);
         });
       }, { threshold: 0.5 });
       document.querySelectorAll('[data-count]').forEach(el => counterObserver.observe(el));
@@ -1013,6 +1168,7 @@
         event.preventDefault();
         const form = event.currentTarget;
         const submit = document.getElementById('submit-lead');
+        if (submit.disabled) return;
         const status = document.querySelector('.form-status');
         const originalLabel = submit.innerHTML;
         submit.disabled = true;

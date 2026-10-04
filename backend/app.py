@@ -145,22 +145,47 @@ def within_rate_limit(source_ip: str) -> bool:
         return True
 
 
+def notification_recipients() -> list[str]:
+    """Keep the connected inbox and merge additional server-side recipients."""
+    configured = [
+        setting("LEAD_NOTIFICATION_EMAIL") or "anuragkeshav03@gmail.com",
+        "business@aigrowlabs.media",
+        *setting("LEAD_NOTIFICATION_EMAILS").split(","),
+    ]
+    recipients = []
+    seen = set()
+    for value in configured:
+        address = value.strip().lower()
+        if not address or address in seen:
+            continue
+        if not EMAIL_PATTERN.fullmatch(address):
+            raise ValueError("LEAD_NOTIFICATION_EMAIL(S) must contain valid email addresses.")
+        seen.add(address)
+        recipients.append(address)
+    return recipients
+
+
 def send_resend_email(lead: dict[str, str], request_id: str) -> str:
     api_key = setting("RESEND_API_KEY")
-    recipient = setting("LEAD_NOTIFICATION_EMAIL", "anuragkeshav03@gmail.com")
     sender = setting("EMAIL_FROM")
     if not api_key or not sender:
         logger.warning(f"[{request_id}] Resend API key or sender email not configured. Skipping email.")
         return "not_configured"
+
+    try:
+        recipients = notification_recipients()
+    except ValueError as error:
+        logger.error(f"[{request_id}] {error}")
+        return "failed"
 
     text = "\n".join(
         [
             "New AI Grow Lab discovery-call request",
             "",
             f"Name: {lead['name']}",
-            f"Company: {lead['company']}",
-            f"Email: {lead['email']}",
-            f"Goal: {lead['goal']}",
+            f"Brand / Company: {lead['company']}",
+            f"Work Email: {lead['email']}",
+            f"Campaign objective: {lead['goal']}",
             f"Context: {lead['message'] or '—'}",
         ]
     )
@@ -169,13 +194,18 @@ def send_resend_email(lead: dict[str, str], request_id: str) -> str:
         data=json.dumps(
             {
                 "from": sender,
-                "to": [recipient],
+                "to": recipients,
                 "reply_to": lead["email"],
                 "subject": f"New lead — {lead['company']}",
                 "text": text,
             }
         ).encode("utf-8"),
-        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json", "User-Agent": "AIGrowLab/1.0"},
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+            "User-Agent": "AIGrowLab/1.0",
+            "Idempotency-Key": f"discovery-call/{request_id}",
+        },
         method="POST",
     )
     try:
@@ -254,6 +284,28 @@ class AppHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(ROOT), **kwargs)
 
+    def allow_public_file(self) -> bool:
+        # The document root also contains private configuration and lead data.
+        # Serve only public website assets, including through encoded paths.
+        path = Path(self.translate_path(self.path)).resolve()
+        public_files = {ROOT / "index.html", ROOT / "favicon-32.png", ROOT / "apple-touch-icon.png"}
+        if path == ROOT:
+            self.path = "/index.html"
+        elif path not in public_files:
+            self.send_error(HTTPStatus.NOT_FOUND)
+            return False
+        return True
+
+    def do_GET(self) -> None:
+        if not self.allow_public_file():
+            return
+        super().do_GET()
+
+    def do_HEAD(self) -> None:
+        if not self.allow_public_file():
+            return
+        super().do_HEAD()
+
     def end_headers(self) -> None:
         # Enterprise Security Headers
         self.send_header("X-Content-Type-Options", "nosniff")
@@ -261,7 +313,7 @@ class AppHandler(SimpleHTTPRequestHandler):
         self.send_header("X-Frame-Options", "DENY")
         self.send_header("X-XSS-Protection", "1; mode=block")
         self.send_header("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
-        self.send_header("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self'")
+        self.send_header("Content-Security-Policy", "default-src 'self'; img-src 'self' data:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self'")
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
@@ -284,7 +336,7 @@ class AppHandler(SimpleHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_POST(self) -> None:
-        request_id = str(uuid.uuid4())[:8]
+        request_id = str(uuid.uuid4())
         if self.path != "/api/leads":
             logger.warning(f"[{request_id}] 404 Not Found: POST {self.path}")
             self.respond_json(HTTPStatus.NOT_FOUND, {"error": "Not found."})
