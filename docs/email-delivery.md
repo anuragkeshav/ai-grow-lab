@@ -1,8 +1,30 @@
 # Discovery Call email diagnosis and verification
 
-Date: 2026-10-04. **Current code is deployed, but production email is blocked by missing Render configuration.** The authenticated findings below supersede the earlier access/deployment limitations recorded later in this document.
+Date: 2026-10-04. **Email configuration is now loaded, but Resend rejects the unverified sender domain.** The latest findings below supersede earlier missing-configuration and access blockers recorded later in this document.
 
-## Current authenticated production findings
+## Latest result after the owner added email settings
+
+Render now contains a sending-only `RESEND_API_KEY`, an `EMAIL_FROM` on `aigrowlabs.media`, and the two real notification recipients (the business mailbox plus the configured Gmail inbox). Runtime startup initially confirmed `recipient_count=2`. The key is recognized by Resend, but `/domains` returns `401 restricted_api_key` because this key can send only; it cannot read domain metadata.
+
+A subsequent environment edit left a literal second-email placeholder alongside the two actual addresses. This caused `invalid_notification_recipient` and HTTP 503. The agent removed **only the known placeholder** via the single-variable Render API, preserved both real recipients, and verified the API key and sender were unchanged. No recipient was invented or silently dropped.
+
+To diagnose the provider's 403 without exposing raw response bodies, fixed-code rejection hints and tests were added in commit `fdb545842fd15f88c5631657a5fdc4d76d923d94`, pushed to GitHub, and deployed to Render. The latest live deployment after the configuration correction is `dep-db131s60tbcc7399b1g0`. **61 Python tests passed**, including body/name redaction and domain-rejection diagnostics. Frontend assets and design did not change; the existing Vercel deployment remains current.
+
+The actual post-correction test was:
+
+- Marker: `Discovery sender-verification test 2026-10-04T10:57:46.953Z`.
+- Page: `https://aigrowlabs.media/`; endpoint: `https://ai-grow-lab.onrender.com/api/leads`.
+- Backend response: **502**, `code: email_delivery_failed`.
+- Request ID: `5a0d2cc2-04dd-470d-a8d1-f3bc0648180b`.
+- Render logs confirm `lead_request_received`, `email_attempt provider=resend recipient_count=2`, then **`resend_response status=403 ... provider_error=validation_error hint=sender_domain_unverified`**.
+- The form retained inputs and correctly displayed failure. **Resend rejected the email; neither recipient was sent this test notification.**
+- Temporary local evidence: `/tmp/aigrow-sender-verification-smoke.json`.
+
+Authoritative DNS is hosted by Hostinger (`atlas.dns-parking.com` / `hyperion.dns-parking.com`). Queries directly to the authoritative server returned NXDOMAIN for `resend._domainkey.aigrowlabs.media` and `send.aigrowlabs.media`; this is not merely a stale local DNS-cache observation. Existing inbound MX records are `mx1.hostinger.com` and `mx2.hostinger.com` and must be preserved.
+
+The remaining email blocker requires verifying `aigrowlabs.media` in Resend: obtain the account-specific sending/DKIM records from Resend Domains, add them to Hostinger DNS using exactly the supplied names/types/values, and wait for Resend's **Verified** status. The agent has Render/GitHub access, but not Hostinger DNS access or Resend domain-management permission. Do not use a sandbox sender, remove the business recipient, or weaken validation to bypass this requirement. Existing proxy-trust/persistent-storage verification notes below also remain applicable.
+
+## Earlier authenticated production findings (missing settings since resolved)
 
 Render and GitHub access are now connected. GitHub `main` and the active Render deployment were both running `c8289d60a304289c7feb9da814493874893b1c20` when inspected. The active service is `ai-grow-lab` (`srv-db12dopsrm7s739oairg`), linked to `anuragkeshav/ai-grow-lab`, branch `main`, with root directory `backend/`, build command `pip install -r requirements.txt`, and start command `python3 app.py`. It is a single **free** instance. Its live deployment is `dep-db12eelg1s2s7388bvtg`.
 
@@ -52,7 +74,7 @@ The live Render hostname is intentionally preserved. Do not switch to the propos
 
 Public MX records point to Hostinger. That establishes mail routing for the domain only, not existence of the `business` mailbox, Resend sender verification, or inbox receipt.
 
-## Historical access and deployment blocker (resolved; email settings still missing)
+## Historical access and deployment blocker (resolved)
 
 Existing authentication allowed read-only Vercel project inspection. The frontend project is `ai-grow-lab-main`, its custom domains are verified, and its latest production deployment was CLI-created from source metadata matching the initial local commit (`c48e13d`). A Vercel deployment does not deploy the Python backend.
 
@@ -139,15 +161,9 @@ This establishes a legitimate request was no longer rate-rejected at that time. 
 
 ## Required next steps to complete production repair
 
-1. Render access is connected and the active service's missing email settings are confirmed. Have the owner enter the actual Resend key, verified sender, and second confirmed recipient directly in Render; do not request secrets in chat or invent a recipient.
-2. Set/confirm, on Render only:
-   ```env
-   RESEND_API_KEY=<existing valid server-side Resend key>
-   EMAIL_FROM=AI Grow Lab <a sender at a domain verified in that Resend account>
-   LEAD_NOTIFICATION_EMAILS=business@aigrowlabs.media,<second confirmed address>
-   ```
-   These are placeholders, not deployable literal values. Keep `LEAD_NOTIFICATION_EMAIL` if it contains an existing recipient, or explicitly migrate that address into the plural setting. Use `HOST=0.0.0.0` and Render's assigned `PORT`.
-3. Verify Render's immediate/intermediate proxy networks and set `TRUSTED_PROXY_CIDRS` narrowly; address persistent single-instance storage or a shared limiter before scaling, with approval for any paid infrastructure. Save/restart Render after adding email configuration and check startup logs. Current backend and public frontend code are already deployed; do not publish `.env*`, `data/`, backend source, or integration secrets as static assets.
+1. Open Resend Domains, select/add `aigrowlabs.media`, and copy the exact required DNS records into Hostinger's DNS zone. Preserve the existing root-domain Hostinger MX records; Resend's sending MX/SPF normally use a separate subdomain. Never invent the verification values.
+2. Wait until Resend marks the sender domain **Verified**. The actual key, sender, and two-recipient list are already configured on Render. Preserve these values; do not paste placeholders or keys into source/chat. The sending-only key does not need broader permissions merely to send from a verified, permitted domain.
+3. Verify Render's immediate/intermediate proxy networks and set `TRUSTED_PROXY_CIDRS` narrowly; address persistent single-instance storage or a shared limiter before scaling, with approval for any paid infrastructure. Only restart Render if environment values change; DNS verification alone does not require changing the sender/key. Current backend and public frontend code are already deployed; do not publish `.env*`, `data/`, backend source, or integration secrets as static assets.
 4. Repeat one labeled real form submission on `aigrowlabs.media`; require 201 with `email_status:"accepted"`. Match its request ID to Render's `email_accepted` log and the Resend email ID.
 5. Verify the actual recipient list and delivery events in Resend, then confirm receipt with both mailbox owners, including spam folders. Controlled provider failures should be tested in staging rather than by breaking working production credentials.
 
