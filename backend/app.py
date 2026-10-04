@@ -11,14 +11,17 @@ import logging
 import os
 import re
 import sqlite3
-import time
 import uuid
+
+import rate_limit
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import closing
 from datetime import datetime, timezone
+from email.utils import parseaddr
 from http import HTTPStatus
+from http.client import HTTPException
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from threading import Lock
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
@@ -26,9 +29,13 @@ ROOT = Path(__file__).resolve().parent.parent
 ENV_FILE = ROOT / ".env"
 DATABASE = ROOT / "data" / "leads.db"
 MAX_BODY_BYTES = 16_000
-RATE_LIMIT_WINDOW_SECONDS = 15 * 60
-RATE_LIMIT_MAX_REQUESTS = 5
-EMAIL_PATTERN = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
+EMAIL_PATTERN = re.compile(
+    r"^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@"
+    r"(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+"
+    r"[A-Za-z]{2,63}$"
+)
+EMAIL_FAILURE_MESSAGE = "We couldn't send your request. Please try again or email us directly."
+EMAIL_SUCCESS_MESSAGE = "Thanks — we'll reply within 24 hours."
 ALLOWED_GOALS = {
     "Launch a product",
     "Build brand awareness",
@@ -45,8 +52,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger("ai_grow_lab")
 
-_rate_limit: dict[str, list[float]] = {}
-_rate_lock = Lock()
 _executor = ThreadPoolExecutor(max_workers=10)
 
 
@@ -73,7 +78,7 @@ def setting(name: str, default: str = "") -> str:
 def ensure_database() -> None:
     DATABASE.parent.mkdir(parents=True, exist_ok=True)
     try:
-        with sqlite3.connect(DATABASE) as connection:
+        with closing(sqlite3.connect(DATABASE)) as connection, connection:
             connection.execute(
                 """
                 CREATE TABLE IF NOT EXISTS leads (
@@ -86,13 +91,28 @@ def ensure_database() -> None:
                     message TEXT NOT NULL,
                     source_ip TEXT NOT NULL,
                     email_status TEXT NOT NULL,
-                    sheets_status TEXT NOT NULL
+                    sheets_status TEXT NOT NULL,
+                    request_id TEXT
                 )
                 """
             )
-        logger.info(f"Database initialized at {DATABASE}")
-    except sqlite3.Error as e:
-        logger.error(f"Failed to initialize database: {e}")
+            columns = {row[1] for row in connection.execute("PRAGMA table_info(leads)")}
+            if "request_id" not in columns:
+                connection.execute("ALTER TABLE leads ADD COLUMN request_id TEXT")
+            rate_limit.initialize(connection)
+        logger.info("Lead database initialized.")
+    except sqlite3.Error:
+        logger.error("Lead database initialization failed.")
+        raise
+
+
+def valid_email(address: str) -> bool:
+    local_part = address.split("@", 1)[0]
+    return bool(
+        len(address) <= 254 and len(local_part) <= 64
+        and not local_part.startswith(".") and not local_part.endswith(".")
+        and ".." not in local_part and EMAIL_PATTERN.fullmatch(address)
+    )
 
 
 def validate_lead(payload: object) -> dict[str, str]:
@@ -113,7 +133,7 @@ def validate_lead(payload: object) -> dict[str, str]:
         raise ValueError("Please enter your name.")
     if not 2 <= len(lead["company"]) <= 120:
         raise ValueError("Please enter your company name.")
-    if not EMAIL_PATTERN.fullmatch(lead["email"]):
+    if not valid_email(lead["email"]):
         raise ValueError("Please enter a valid work email.")
     if lead["goal"] not in ALLOWED_GOALS:
         raise ValueError("Please choose a campaign goal from the list.")
@@ -122,33 +142,10 @@ def validate_lead(payload: object) -> dict[str, str]:
     return lead
 
 
-def within_rate_limit(source_ip: str) -> bool:
-    now = time.monotonic()
-    with _rate_lock:
-        # Cleanup old entries for all IPs to prevent memory leaks
-        keys_to_delete = []
-        for ip, timestamps in _rate_limit.items():
-            active_for_ip = [ts for ts in timestamps if now - ts < RATE_LIMIT_WINDOW_SECONDS]
-            if active_for_ip:
-                _rate_limit[ip] = active_for_ip
-            else:
-                keys_to_delete.append(ip)
-        for key in keys_to_delete:
-            del _rate_limit[key]
-
-        # Check current IP
-        active = _rate_limit.get(source_ip, [])
-        if len(active) >= RATE_LIMIT_MAX_REQUESTS:
-            return False
-        active.append(now)
-        _rate_limit[source_ip] = active
-        return True
-
-
 def notification_recipients() -> list[str]:
-    """Keep the connected inbox and merge additional server-side recipients."""
+    """Merge confirmed server-side inboxes, retaining the legacy recipient."""
     configured = [
-        setting("LEAD_NOTIFICATION_EMAIL") or "anuragkeshav03@gmail.com",
+        setting("LEAD_NOTIFICATION_EMAIL"),
         "business@aigrowlabs.media",
         *setting("LEAD_NOTIFICATION_EMAILS").split(","),
     ]
@@ -158,25 +155,39 @@ def notification_recipients() -> list[str]:
         address = value.strip().lower()
         if not address or address in seen:
             continue
-        if not EMAIL_PATTERN.fullmatch(address):
-            raise ValueError("LEAD_NOTIFICATION_EMAIL(S) must contain valid email addresses.")
+        if not valid_email(address):
+            raise ValueError("invalid_notification_recipient")
         seen.add(address)
         recipients.append(address)
+    if len(recipients) < 2:
+        raise ValueError("second_confirmed_recipient_required")
+    if len(recipients) > 50:
+        raise ValueError("too_many_notification_recipients")
     return recipients
 
 
-def send_resend_email(lead: dict[str, str], request_id: str) -> str:
+def email_configuration() -> tuple[str, str, list[str]]:
+    """Validate local configuration; Resend enforces sender-domain verification."""
     api_key = setting("RESEND_API_KEY")
     sender = setting("EMAIL_FROM")
-    if not api_key or not sender:
-        logger.warning(f"[{request_id}] Resend API key or sender email not configured. Skipping email.")
-        return "not_configured"
+    if not api_key:
+        raise ValueError("missing_RESEND_API_KEY")
+    if not sender:
+        raise ValueError("missing_EMAIL_FROM")
+    _, address = parseaddr(sender)
+    if ("\r" in sender or "\n" in sender or not valid_email(address)
+            or (sender != address and not sender.endswith(f"<{address}>"))):
+        raise ValueError("invalid_EMAIL_FROM")
+    return api_key, sender, notification_recipients()
 
+
+def send_resend_email(lead: dict[str, str], request_id: str) -> str:
     try:
-        recipients = notification_recipients()
+        api_key, sender, recipients = email_configuration()
     except ValueError as error:
-        logger.error(f"[{request_id}] {error}")
-        return "failed"
+        # These errors are fixed codes, never configuration values.
+        logger.error("[%s] delivery_failure reason=%s", request_id, error)
+        return "not_configured"
 
     text = "\n".join(
         [
@@ -208,17 +219,29 @@ def send_resend_email(lead: dict[str, str], request_id: str) -> str:
         },
         method="POST",
     )
+    logger.info("[%s] email_attempt provider=resend recipient_count=%d", request_id, len(recipients))
     try:
         with urlopen(request, timeout=10) as response:
-            if 200 <= response.status < 300:
-                logger.info(f"[{request_id}] Successfully sent email via Resend.")
-                return "sent"
-            else:
-                logger.error(f"[{request_id}] Resend API returned status {response.status}")
-    except (HTTPError, URLError, TimeoutError) as e:
-        logger.error(f"[{request_id}] Failed to send Resend email: {e}")
-        return "failed"
-    return "failed"
+            logger.info("[%s] resend_response status=%d", request_id, response.status)
+            if not 200 <= response.status < 300:
+                logger.error("[%s] delivery_failure reason=provider_status", request_id)
+                return "uncertain" if response.status >= 500 or response.status == 408 else "failed"
+            # A 2xx without Resend's email ID is not proof of acceptance.
+            result = json.loads(response.read(16_000))
+            email_id = str(uuid.UUID(result["id"]))
+            logger.info("[%s] email_accepted resend_email_id=%s", request_id, email_id)
+            return "sent"
+    except HTTPError as error:
+        # Never log raw provider bodies/exception strings: they may echo secrets.
+        logger.error("[%s] resend_response status=%d delivery_failure reason=provider_rejected", request_id, error.code)
+        error.close()
+        return "uncertain" if error.code >= 500 or error.code == 408 else "failed"
+    except (URLError, OSError, HTTPException) as error:
+        logger.error("[%s] delivery_failure reason=transport_error type=%s", request_id, type(error).__name__)
+    except (ValueError, KeyError, TypeError, AttributeError):
+        logger.error("[%s] delivery_failure reason=invalid_provider_response", request_id)
+    # An ambiguous provider outcome might still have sent mail. Keep its quota.
+    return "uncertain"
 
 
 def send_to_google_sheets(lead: dict[str, str], created_at: str, request_id: str) -> str:
@@ -241,41 +264,41 @@ def send_to_google_sheets(lead: dict[str, str], created_at: str, request_id: str
                 return "sent"
             else:
                 logger.error(f"[{request_id}] Google Sheets API returned status {response.status}")
-    except (HTTPError, URLError, TimeoutError) as e:
-        logger.error(f"[{request_id}] Failed to sync lead to Google Sheets: {e}")
+    except (HTTPError, URLError, OSError, HTTPException) as error:
+        logger.error("[%s] Sheets sync failed type=%s", request_id, type(error).__name__)
+        if isinstance(error, HTTPError):
+            error.close()
         return "failed"
     return "failed"
 
 
-def process_webhooks_background(lead: dict[str, str], source_ip: str, created_at: str, request_id: str) -> None:
-    """Run external API calls in a background thread so the user doesn't wait."""
+def store_lead(lead: dict[str, str], source_ip: str, created_at: str, request_id: str) -> int:
+    """Persist before sending, so even a failed attempt can be investigated."""
+    with closing(sqlite3.connect(DATABASE, timeout=10)) as connection, connection:
+        cursor = connection.execute(
+            """
+            INSERT INTO leads (created_at, name, company, email, goal, message, source_ip, email_status, sheets_status, request_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (created_at, lead["name"], lead["company"], lead["email"], lead["goal"],
+             lead["message"], source_ip, "pending", "not_configured", request_id),
+        )
+        return cursor.lastrowid
+
+
+def update_email_status(lead_id: int, status: str) -> None:
+    with closing(sqlite3.connect(DATABASE, timeout=10)) as connection, connection:
+        connection.execute("UPDATE leads SET email_status = ? WHERE id = ?", (status, lead_id))
+
+
+def sync_sheets_background(lead: dict[str, str], created_at: str, request_id: str, lead_id: int) -> None:
+    """Only the optional Sheets mirror runs after the email response."""
     try:
-        logger.info(f"[{request_id}] Starting background webhook processing for lead: {lead['email']}")
-        email_status = send_resend_email(lead, request_id)
-        sheets_status = send_to_google_sheets(lead, created_at, request_id)
-        
-        # Save to DB inside the background thread to avoid blocking the main thread
-        with sqlite3.connect(DATABASE, timeout=10) as connection:
-            connection.execute(
-                """
-                INSERT INTO leads (created_at, name, company, email, goal, message, source_ip, email_status, sheets_status)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    created_at,
-                    lead["name"],
-                    lead["company"],
-                    lead["email"],
-                    lead["goal"],
-                    lead["message"],
-                    source_ip,
-                    email_status,
-                    sheets_status,
-                ),
-            )
-        logger.info(f"[{request_id}] Successfully saved lead to database.")
-    except Exception as e:
-        logger.error(f"[{request_id}] Unexpected error in background webhook processing: {e}")
+        status = send_to_google_sheets(lead, created_at, request_id)
+        with closing(sqlite3.connect(DATABASE, timeout=10)) as connection, connection:
+            connection.execute("UPDATE leads SET sheets_status = ? WHERE id = ?", (status, lead_id))
+    except Exception as error:
+        logger.error("[%s] Sheets sync failed type=%s", request_id, type(error).__name__)
 
 
 class AppHandler(SimpleHTTPRequestHandler):
@@ -317,6 +340,7 @@ class AppHandler(SimpleHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("Access-Control-Expose-Headers", "Retry-After")
         super().end_headers()
 
     def do_OPTIONS(self) -> None:
@@ -327,13 +351,24 @@ class AppHandler(SimpleHTTPRequestHandler):
         # Override to use standard logging instead of sys.stderr
         logger.info(f"{self.client_address[0]} - {format % args}")
 
-    def respond_json(self, status: HTTPStatus, data: dict[str, object]) -> None:
+    def respond_json(self, status: HTTPStatus, data: dict[str, object], retry_after: int = 0) -> None:
         body = json.dumps(data).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        if retry_after:
+            self.send_header("Retry-After", str(retry_after))
         self.end_headers()
         self.wfile.write(body)
+
+    def reject_rate_limit(self, request_id: str, retry_after: int) -> None:
+        logger.warning("[%s] rate_limit_rejected retry_after=%d email_attempted=false", request_id, retry_after)
+        self.respond_json(HTTPStatus.TOO_MANY_REQUESTS, {
+            "code": "rate_limited", "request_id": request_id,
+            "retry_after": retry_after, "email_status": "not_attempted",
+            "error": f"Too many requests. Please wait {retry_after} {'second' if retry_after == 1 else 'seconds'} before trying again. This request was not sent.",
+        }, retry_after=retry_after)
 
     def do_POST(self) -> None:
         request_id = str(uuid.uuid4())
@@ -342,6 +377,24 @@ class AppHandler(SimpleHTTPRequestHandler):
             self.respond_json(HTTPStatus.NOT_FOUND, {"error": "Not found."})
             return
             
+        logger.info("[%s] lead_request_received", request_id)
+        try:
+            proxies = rate_limit.trusted_proxies(setting("TRUSTED_PROXY_CIDRS"))
+            source_ip = rate_limit.client_ip(
+                self.client_address[0], ",".join(self.headers.get_all("X-Forwarded-For", [])), proxies,
+            )
+            identity = rate_limit.identity(source_ip)
+            retry_after = rate_limit.acquire(DATABASE, "request", identity, request_id)
+        except (ValueError, sqlite3.Error) as error:
+            logger.error("[%s] request_guard_unavailable type=%s", request_id, type(error).__name__)
+            self.respond_json(HTTPStatus.SERVICE_UNAVAILABLE, {
+                "code": "service_unavailable", "error": EMAIL_FAILURE_MESSAGE, "request_id": request_id,
+            })
+            return
+        if retry_after:
+            self.reject_rate_limit(request_id, retry_after)
+            return
+
         if self.headers.get("Content-Type", "").split(";", 1)[0] != "application/json":
             logger.warning(f"[{request_id}] 415 Unsupported Media Type")
             self.respond_json(HTTPStatus.UNSUPPORTED_MEDIA_TYPE, {"error": "Please submit the form again."})
@@ -357,13 +410,6 @@ class AppHandler(SimpleHTTPRequestHandler):
             self.respond_json(HTTPStatus.BAD_REQUEST, {"error": "That request is too large. Please try again."})
             return
 
-        source_ip = self.headers.get("X-Forwarded-For", self.client_address[0]).split(",")[0].strip()
-        
-        if not within_rate_limit(source_ip):
-            logger.warning(f"[{request_id}] 429 Too Many Requests: Rate limit exceeded for IP {source_ip}")
-            self.respond_json(HTTPStatus.TOO_MANY_REQUESTS, {"error": "Please wait a few minutes before sending another request."})
-            return
-            
         try:
             payload = json.loads(self.rfile.read(content_length).decode("utf-8"))
             lead = validate_lead(payload)
@@ -373,21 +419,75 @@ class AppHandler(SimpleHTTPRequestHandler):
             return
 
         if lead.get("bot"):
-            logger.info(f"[{request_id}] 201 Created: Honeypot triggered by IP {source_ip}")
-            self.respond_json(HTTPStatus.CREATED, {"ok": True, "message": "Thanks — we’ll reply within 24 hours."})
+            logger.info("[%s] lead_request_rejected", request_id)
+            self.respond_json(HTTPStatus.BAD_REQUEST, {"error": EMAIL_FAILURE_MESSAGE, "request_id": request_id})
+            return
+
+        try:
+            retry_after = rate_limit.acquire(DATABASE, "submission", identity, request_id)
+        except sqlite3.Error:
+            logger.error("[%s] submission_guard_unavailable", request_id)
+            self.respond_json(HTTPStatus.SERVICE_UNAVAILABLE, {
+                "code": "service_unavailable", "error": EMAIL_FAILURE_MESSAGE, "request_id": request_id,
+            })
+            return
+        if retry_after:
+            self.reject_rate_limit(request_id, retry_after)
             return
 
         created_at = datetime.now(timezone.utc).isoformat()
-        
-        # Dispatch background task for fast response
-        logger.info(f"[{request_id}] 201 Created: Valid lead received. Dispatching background workers.")
-        _executor.submit(process_webhooks_background, lead, source_ip, created_at, request_id)
-        
-        self.respond_json(HTTPStatus.CREATED, {"ok": True, "message": "Thanks — we’ll reply within 24 hours."})
+        email_status = "uncertain"
+        email_attempted = False
+        processing_failed = False
+        try:
+            lead_id = store_lead(lead, source_ip, created_at, request_id)
+            email_attempted = True
+            email_status = send_resend_email(lead, request_id)
+            update_email_status(lead_id, email_status)
+        except Exception as error:
+            processing_failed = True
+            logger.error("[%s] delivery_failure reason=processing_error type=%s", request_id, type(error).__name__)
+        finally:
+            if not email_attempted or email_status in ("failed", "not_configured"):
+                try:
+                    rate_limit.release_submission(DATABASE, request_id)
+                except sqlite3.Error:
+                    # Fail closed: never claim a slot was released if storage failed.
+                    logger.error("[%s] submission_quota_release_failed", request_id)
+
+        if processing_failed:
+            self.respond_json(HTTPStatus.INTERNAL_SERVER_ERROR, {
+                "code": "processing_error", "error": EMAIL_FAILURE_MESSAGE, "request_id": request_id,
+            })
+            return
+        if email_status != "sent":
+            status = HTTPStatus.SERVICE_UNAVAILABLE if email_status == "not_configured" else HTTPStatus.BAD_GATEWAY
+            code = "email_not_configured" if email_status == "not_configured" else "email_delivery_failed"
+            self.respond_json(status, {"code": code, "error": EMAIL_FAILURE_MESSAGE, "request_id": request_id})
+            return
+
+        if setting("GOOGLE_SHEETS_WEBHOOK_URL"):
+            try:
+                _executor.submit(sync_sheets_background, lead, created_at, request_id, lead_id)
+            except RuntimeError:
+                logger.error("[%s] Sheets background worker unavailable", request_id)
+        logger.info("[%s] lead_processed email_status=accepted", request_id)
+        self.respond_json(HTTPStatus.CREATED, {
+            "ok": True, "email_status": "accepted", "message": EMAIL_SUCCESS_MESSAGE, "request_id": request_id,
+        })
 
 
 if __name__ == "__main__":
     ensure_database()
+    try:
+        _, sender, recipients = email_configuration()
+        logger.info("Email configuration loaded recipient_count=%d sender_domain=%s", len(recipients), parseaddr(sender)[1].split("@")[1])
+    except ValueError as error:
+        logger.error("Email configuration invalid reason=%s; lead submissions will fail closed", error)
+    proxies = rate_limit.trusted_proxies(setting("TRUSTED_PROXY_CIDRS"))
+    logger.info("Request guard ready request_limit=5/min submission_limit=5/15min trusted_proxy_networks=%d", len(proxies))
+    if setting("RENDER") and not proxies:
+        logger.warning("Render proxy trust is not configured; forwarded headers are ignored. Configure verified ingress CIDRs before production traffic.")
     host = setting("HOST", "0.0.0.0")
     port = int(setting("PORT", "8000"))
     logger.info(f"AI Grow Lab Enterprise Server starting at http://{host}:{port}")

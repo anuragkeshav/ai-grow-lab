@@ -1159,18 +1159,24 @@
       document.querySelectorAll('[data-count]').forEach(el => counterObserver.observe(el));
 
       /* ══════ FORM ══════ */
-      // Render backend URL (used only when frontend is on a different domain like Netlify)
+      // Vercel hosts the frontend; this is the live Render service URL.
+      // The proposed ai-grow-lab-backend hostname currently has no routed server.
       const BACKEND_URL = 'https://ai-grow-lab.onrender.com';
       const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.hostname.endsWith('.onrender.com'))
         ? '' : BACKEND_URL;
 
+      let leadRetryAt = 0;
+      let leadRetryTimer;
       document.getElementById('contact-form').addEventListener('submit', async (event) => {
         event.preventDefault();
         const form = event.currentTarget;
         const submit = document.getElementById('submit-lead');
-        if (submit.disabled) return;
+        if (submit.disabled || Date.now() < leadRetryAt) return;
         const status = document.querySelector('.form-status');
         const originalLabel = submit.innerHTML;
+        let failureMessage = "We couldn't send your request. Please try again or email us directly.";
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 90000);
         submit.disabled = true;
         submit.innerHTML = 'Sending…';
         status.textContent = '';
@@ -1178,19 +1184,52 @@
           const response = await fetch(API_BASE + '/api/leads', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(Object.fromEntries(new FormData(form).entries()))
+            body: JSON.stringify(Object.fromEntries(new FormData(form).entries())),
+            signal: controller.signal
           });
-          const result = await response.json();
-          if (!response.ok) throw new Error(result.error || 'Something went wrong.');
+          const result = await response.json().catch(() => null);
+          if (response.status === 429) {
+            const header = response.headers.get('Retry-After');
+            const headerSeconds = header && /^\d+$/.test(header.trim())
+              ? Number(header) : Math.ceil((Date.parse(header || '') - Date.now()) / 1000);
+            const bodySeconds = Number(result?.retry_after);
+            const retrySeconds = Math.max(0,
+              Number.isFinite(headerSeconds) ? headerSeconds : 0,
+              Number.isFinite(bodySeconds) ? bodySeconds : 0);
+            const wait = Math.ceil(retrySeconds);
+            failureMessage = wait > 0
+              ? `Too many requests. Please wait ${wait} ${wait === 1 ? 'second' : 'seconds'} before trying again. This request was not sent.`
+              : 'Too many requests. Please wait before trying again or email us directly. This request was not sent.';
+            if (wait > 0) leadRetryAt = Date.now() + wait * 1000;
+            throw new Error('Submission rate limited.');
+          }
+          if (!response.ok || result?.ok !== true || result?.email_status !== 'accepted') {
+            if (response.status === 400 && typeof result?.error === 'string') {
+              failureMessage = result.error;
+            }
+            throw new Error('Lead was not accepted.');
+          }
           form.reset();
-          status.textContent = '✓ ' + result.message;
+          status.textContent = "✓ Thanks — we'll reply within 24 hours.";
           status.style.color = '#2e7d32';
-        } catch (error) {
-          status.textContent = error.message || 'We could not send your request. Please try again or email us directly.';
+        } catch {
+          status.textContent = failureMessage;
           status.style.color = '#c62828';
         } finally {
-          submit.disabled = false;
+          clearTimeout(timeout);
+          clearTimeout(leadRetryTimer);
           submit.innerHTML = originalLabel;
+          const resume = () => {
+            const remaining = leadRetryAt - Date.now();
+            submit.disabled = remaining > 0;
+            if (remaining > 0) {
+              leadRetryTimer = setTimeout(resume, Math.min(remaining, 2147483647));
+            } else if (leadRetryAt) {
+              leadRetryAt = 0;
+              status.textContent = 'You can try sending your request again.';
+            }
+          };
+          resume();
         }
       });
     </script>

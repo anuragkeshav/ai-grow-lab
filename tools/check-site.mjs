@@ -74,11 +74,14 @@ try {
     // Real browser validation and submit lifecycle, with an isolated fake API.
     const submissions = [];
     let responseStatus = 201;
+    let responseBody = JSON.stringify({ ok: true, email_status: 'accepted', message: "Thanks — we'll reply within 24 hours." });
+    let abortRequest = false;
+    let responseHeaders = {};
     await page.route('**/api/leads', async route => {
       submissions.push(route.request().postDataJSON());
       await new Promise(resolve => setTimeout(resolve, 200));
-      await route.fulfill({ status: responseStatus, contentType: 'application/json', body: JSON.stringify(responseStatus === 201
-        ? { ok: true, message: 'Thanks — we’ll reply within 24 hours.' } : { error: 'Please try again later.' }) });
+      if (abortRequest) return route.abort('failed');
+      await route.fulfill({ status: responseStatus, contentType: 'application/json', headers: responseHeaders, body: responseBody });
     });
     const fill = async () => {
       await page.locator('#name').fill('Test Founder');
@@ -92,6 +95,8 @@ try {
     check(submissions.length === 0, 'invalid empty form is not submitted');
     await fill();
     await page.locator('#contact-form').evaluate(form => { form.requestSubmit(); form.requestSubmit(); });
+    check(await page.locator('#submit-lead').isDisabled(), 'CTA disabled until API finishes');
+    check(await page.locator('.form-status').textContent() === '', 'no premature success');
     await page.waitForTimeout(500);
     check(submissions.length === 1, 'rapid duplicate submit guarded');
     assert.deepEqual(submissions[0], { name: 'Test Founder', company: 'Example Brand', email: 'founder@example.com',
@@ -99,12 +104,57 @@ try {
     check((await page.locator('.form-status').textContent()).includes('24 hours'), 'success message');
     check(await page.locator('#name').inputValue() === '', 'reset after success');
     responseStatus = 429;
+    responseHeaders = { 'Retry-After': '1' };
+    responseBody = JSON.stringify({ code: 'rate_limited', retry_after: 1, email_status: 'not_attempted' });
     await fill();
     await page.locator('#contact-form').evaluate(form => form.requestSubmit());
-    await page.waitForTimeout(500);
-    check(await page.locator('#name').inputValue() === 'Test Founder', 'failure preserves input');
-    check(await page.locator('#submit-lead').isEnabled(), 'failure restores CTA');
-    check((await page.locator('.form-status').textContent()).includes('try again'), 'error feedback');
+    await page.waitForTimeout(400);
+    check(await page.locator('#name').inputValue() === 'Test Founder', 'rate limit preserves input');
+    check(await page.locator('#submit-lead').isDisabled(), 'rate limit keeps CTA disabled during cooldown');
+    check(await page.locator('.form-status').textContent() === 'Too many requests. Please wait 1 second before trying again. This request was not sent.', 'rate limit is distinct from delivery failure');
+    const limitedCount = submissions.length;
+    await page.locator('#contact-form').evaluate(form => { form.requestSubmit(); form.requestSubmit(); });
+    await page.waitForTimeout(100);
+    check(submissions.length === limitedCount, 'cooldown blocks repeat clicks without requests');
+    await page.waitForFunction(() => !document.getElementById('submit-lead').disabled);
+    check(submissions.length === limitedCount, 'cooldown never auto-resubmits');
+    check(await page.locator('.form-status').textContent() === 'You can try sending your request again.', 'cooldown expires normally');
+    responseHeaders = {};
+    const failure = "We couldn't send your request. Please try again or email us directly.";
+    for (const [label, code, body, abort] of [
+      ['Resend failure', 502, JSON.stringify({ error: failure }), false],
+      ['configuration failure', 503, JSON.stringify({ error: failure }), false],
+      ['proxy HTML', 502, '<html>Bad gateway</html>', false],
+      ['legacy queued success', 201, JSON.stringify({ ok: true, message: 'Queued' }), false],
+      ['2xx error', 200, JSON.stringify({ ok: false, email_status: 'accepted' }), false],
+      ['empty JSON', 200, 'null', false],
+      ['network failure', 200, '{}', true],
+    ]) {
+      responseStatus = code;
+      responseBody = body;
+      abortRequest = abort;
+      await page.locator('#contact-form').evaluate(form => form.requestSubmit());
+      await page.waitForFunction(() => !document.getElementById('submit-lead').disabled);
+      check(await page.locator('.form-status').textContent() === failure, `${label}: exact failure message`);
+      check(await page.locator('#name').inputValue() === 'Test Founder', `${label}: preserves input`);
+    }
+    abortRequest = false;
+    responseStatus = 429;
+    responseBody = '<html>Rate limited by proxy</html>';
+    responseHeaders = { 'Retry-After': new Date(Date.now() + 2500).toUTCString() };
+    await page.locator('#contact-form').evaluate(form => form.requestSubmit());
+    await page.waitForTimeout(400);
+    check((await page.locator('.form-status').textContent()).startsWith('Too many requests.'), 'non-JSON 429 remains a rate-limit error');
+    check(await page.locator('#submit-lead').isDisabled(), 'HTTP-date Retry-After is honored');
+    await page.waitForFunction(() => !document.getElementById('submit-lead').disabled);
+    responseHeaders = {};
+    responseBody = JSON.stringify({ error: 'Please wait a few minutes before sending another request.' });
+    await page.locator('#contact-form').evaluate(form => form.requestSubmit());
+    await page.waitForTimeout(400);
+    check((await page.locator('.form-status').textContent()).includes('Too many requests.'), 'legacy 429 is not an email failure');
+    check(await page.locator('#submit-lead').isEnabled(), 'unknown Retry-After does not lock UI indefinitely');
+    check(await page.locator('a[href="mailto:business@aigrowlabs.media"]').count() === 1, 'correct public business email');
+    check(!(await page.content()).includes('buisness@'), 'no business email typo');
     if (width < 681) {
       await jump(0);
       await page.locator('.menu').click();
