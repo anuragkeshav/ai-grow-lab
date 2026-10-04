@@ -1,6 +1,31 @@
 # Discovery Call email diagnosis and verification
 
-Date: 2026-10-04. Local repair implemented and tested; **not deployed**. Production Resend acceptance and inbox delivery remain unverified.
+Date: 2026-10-04. **Current code is deployed, but production email is blocked by missing Render configuration.** The authenticated findings below supersede the earlier access/deployment limitations recorded later in this document.
+
+## Current authenticated production findings
+
+Render and GitHub access are now connected. GitHub `main` and the active Render deployment were both running `c8289d60a304289c7feb9da814493874893b1c20` when inspected. The active service is `ai-grow-lab` (`srv-db12dopsrm7s739oairg`), linked to `anuragkeshav/ai-grow-lab`, branch `main`, with root directory `backend/`, build command `pip install -r requirements.txt`, and start command `python3 app.py`. It is a single **free** instance. Its live deployment is `dep-db12eelg1s2s7388bvtg`.
+
+The authenticated Render environment-variable API returned **zero service variables**, and the workspace has **zero environment groups**. Specifically, `RESEND_API_KEY`, `EMAIL_FROM`, `LEAD_NOTIFICATION_EMAIL`, `LEAD_NOTIFICATION_EMAILS`, and `TRUSTED_PROXY_CIDRS` are absent. The startup log confirms `Email configuration invalid reason=missing_RESEND_API_KEY`. No sender or second recipient can be treated as configured/confirmed. Vercel also has no production environment variables; there is no existing Resend configuration there to migrate.
+
+Vercel was still serving the old frontend. The matching public assets were deployed to the existing `ai-grow-lab-main` project, deployment `dpl_B8sSoWJvmTKAsZ8vcamc2QKMw6pN` (`https://ai-grow-lab-main-lqx8vuret-client-limited-co.vercel.app`). Both `aigrowlabs.media` and `www.aigrowlabs.media` now serve an exact byte match of the checked-in HTML, including acceptance checks and rate-limit cooldown handling. Only HTML/images/icons were uploaded; configuration, backend source, and lead data return 404 on Vercel.
+
+A real post-deployment submission was made through `https://aigrowlabs.media/`:
+
+- Marker: `Discovery connected-access test 2026-10-04T10:27:38.187Z`.
+- Endpoint: `https://ai-grow-lab.onrender.com/api/leads`.
+- HTTP **503**, `code: email_not_configured`.
+- Request ID: `47eed974-3121-49a0-8a85-0d57a2843aa0`.
+- Render logs for that exact ID show `lead_request_received`, followed by `delivery_failure reason=missing_RESEND_API_KEY`.
+- The frontend correctly displayed the failure message and retained the form inputs.
+- **Resend was not called and no notification was sent by this test.** This is now a proven configuration failure, not an inference from an HTTP success response.
+- Evidence: `/tmp/aigrow-connected-production-smoke.json` (temporary local artifact).
+
+The runtime access log shows the direct TCP peer as `127.0.0.1`, while trusted-proxy configuration is empty. Actual ingress header topology still requires verification before choosing narrow trusted networks. The service's free/ephemeral storage is not a verified durable limiter store across redeployments; do not claim persistence beyond an unchanged database file or purchase/upgrade infrastructure without approval.
+
+Required user input is now the **actual Resend key**, a **verified sender**, and the **second confirmed recipient**, entered directly into Render's Environment settings—not chat or GitHub. Account access alone does not create these values. After saving/restarting, verify configuration and repeat a single production submission, then check provider delivery events and recipient inboxes.
+
+The browser smoke harness was also corrected to expose `Retry-After` on cross-origin mocked responses (matching the real backend) and construct HTTP-date retry values when sending the response. The old harness passed on localhost but incorrectly hid the header when run against Vercel. After correction, **222 browser assertions passed against `https://aigrowlabs.media`** across four viewport sizes (API responses intercepted; no mail from this suite), and **58 Python tests passed**. Syntax and diff checks also passed. The separate, unmocked production submission above still correctly failed on missing configuration.
 
 ## Proven failure and local repair
 
@@ -27,7 +52,7 @@ The live Render hostname is intentionally preserved. Do not switch to the propos
 
 Public MX records point to Hostinger. That establishes mail routing for the domain only, not existence of the `business` mailbox, Resend sender verification, or inbox receipt.
 
-## Access and deployment blocker
+## Historical access and deployment blocker (resolved; email settings still missing)
 
 Existing authentication allowed read-only Vercel project inspection. The frontend project is `ai-grow-lab-main`, its custom domains are verified, and its latest production deployment was CLI-created from source metadata matching the initial local commit (`c48e13d`). A Vercel deployment does not deploy the Python backend.
 
@@ -114,7 +139,7 @@ This establishes a legitimate request was no longer rate-rejected at that time. 
 
 ## Required next steps to complete production repair
 
-1. Connect authenticated Render access for the **active** service. Inspect the environment without exposing credentials. Preserve existing working recipients.
+1. Render access is connected and the active service's missing email settings are confirmed. Have the owner enter the actual Resend key, verified sender, and second confirmed recipient directly in Render; do not request secrets in chat or invent a recipient.
 2. Set/confirm, on Render only:
    ```env
    RESEND_API_KEY=<existing valid server-side Resend key>
@@ -122,7 +147,7 @@ This establishes a legitimate request was no longer rate-rejected at that time. 
    LEAD_NOTIFICATION_EMAILS=business@aigrowlabs.media,<second confirmed address>
    ```
    These are placeholders, not deployable literal values. Keep `LEAD_NOTIFICATION_EMAIL` if it contains an existing recipient, or explicitly migrate that address into the plural setting. Use `HOST=0.0.0.0` and Render's assigned `PORT`.
-3. Verify Render's immediate/intermediate proxy networks and set `TRUSTED_PROXY_CIDRS` narrowly; confirm persistent single-instance SQLite storage or provide a shared limiter store before scaling. Deploy/restart the Render backend first; check configuration startup logs and its running revision. Then deploy only public frontend assets to Vercel. Do not publish `.env*`, `data/`, backend source, or integration secrets as static assets.
+3. Verify Render's immediate/intermediate proxy networks and set `TRUSTED_PROXY_CIDRS` narrowly; address persistent single-instance storage or a shared limiter before scaling, with approval for any paid infrastructure. Save/restart Render after adding email configuration and check startup logs. Current backend and public frontend code are already deployed; do not publish `.env*`, `data/`, backend source, or integration secrets as static assets.
 4. Repeat one labeled real form submission on `aigrowlabs.media`; require 201 with `email_status:"accepted"`. Match its request ID to Render's `email_accepted` log and the Resend email ID.
 5. Verify the actual recipient list and delivery events in Resend, then confirm receipt with both mailbox owners, including spam folders. Controlled provider failures should be tested in staging rather than by breaking working production credentials.
 

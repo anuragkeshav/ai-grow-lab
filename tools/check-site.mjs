@@ -77,11 +77,18 @@ try {
     let responseBody = JSON.stringify({ ok: true, email_status: 'accepted', message: "Thanks — we'll reply within 24 hours." });
     let abortRequest = false;
     let responseHeaders = {};
+    let retryAfterDate = false;
     await page.route('**/api/leads', async route => {
       submissions.push(route.request().postDataJSON());
       await new Promise(resolve => setTimeout(resolve, 200));
       if (abortRequest) return route.abort('failed');
-      await route.fulfill({ status: responseStatus, contentType: 'application/json', headers: responseHeaders, body: responseBody });
+      // Date-based cooldowns begin when the response is sent, not before a real
+      // cross-origin preflight/network round trip that may consume the interval.
+      // Match the backend's CORS contract when testing the real Vercel origin.
+      const headers = { 'Access-Control-Allow-Origin': '*',
+        'Access-Control-Expose-Headers': 'Retry-After', ...responseHeaders };
+      if (retryAfterDate) headers['Retry-After'] = new Date(Date.now() + 4000).toUTCString();
+      await route.fulfill({ status: responseStatus, contentType: 'application/json', headers, body: responseBody });
     });
     const fill = async () => {
       await page.locator('#name').fill('Test Founder');
@@ -141,12 +148,13 @@ try {
     abortRequest = false;
     responseStatus = 429;
     responseBody = '<html>Rate limited by proxy</html>';
-    responseHeaders = { 'Retry-After': new Date(Date.now() + 2500).toUTCString() };
+    retryAfterDate = true;
     await page.locator('#contact-form').evaluate(form => form.requestSubmit());
     await page.waitForTimeout(400);
     check((await page.locator('.form-status').textContent()).startsWith('Too many requests.'), 'non-JSON 429 remains a rate-limit error');
     check(await page.locator('#submit-lead').isDisabled(), 'HTTP-date Retry-After is honored');
     await page.waitForFunction(() => !document.getElementById('submit-lead').disabled);
+    retryAfterDate = false;
     responseHeaders = {};
     responseBody = JSON.stringify({ error: 'Please wait a few minutes before sending another request.' });
     await page.locator('#contact-form').evaluate(form => form.requestSubmit());
