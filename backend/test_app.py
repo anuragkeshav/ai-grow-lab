@@ -9,6 +9,7 @@ import unittest
 from contextlib import closing
 from http.client import HTTPConnection
 from http.server import ThreadingHTTPServer
+from io import BytesIO
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 from urllib.error import HTTPError, URLError
@@ -162,6 +163,40 @@ class EmailDeliveryTests(unittest.TestCase):
             self.assertIn(expected, text)
         for secret in ("server-side-test-key", "Authorization", LEAD["email"], LEAD["message"], "connected@example.com"):
             self.assertNotIn(secret, text)
+
+    def test_provider_domain_rejection_logs_only_a_safe_hint(self):
+        body = json.dumps({"name": "validation_error", "message":
+            "The aigrowlabs.media domain is not verified. server-side-test-key founder@example.com"}).encode()
+        error = HTTPError("https://api.resend.com/emails", 403, "Forbidden", {}, BytesIO(body))
+        with self.assertLogs(app.logger) as logs, patch.object(app, "urlopen", side_effect=error):
+            self.assertEqual(app.send_resend_email(LEAD, "domain-rejection"), "failed")
+        text = "\n".join(logs.output)
+        self.assertIn("provider_error=validation_error", text)
+        self.assertIn("hint=sender_domain_unverified", text)
+        self.assertNotIn("server-side-test-key", text)
+        self.assertNotIn("founder@example.com", text)
+        self.assertNotIn("The aigrowlabs.media domain", text)
+
+    def test_other_provider_diagnostics_use_fixed_codes(self):
+        cases = (
+            ("validation_error", "You can only send testing emails to your own email address", "sandbox_recipient_restriction"),
+            ("restricted_api_key", "Restricted resource", "api_key_or_permission"),
+            ("rate_limit_exceeded", "Too many requests", "provider_quota"),
+        )
+        for name, message, hint in cases:
+            body = json.dumps({"name": name, "message": message}).encode()
+            error = HTTPError("https://api.resend.com/emails", 403, "Forbidden", {}, BytesIO(body))
+            with self.subTest(name=name), closing(error):
+                self.assertEqual(app.resend_failure_details(error), (name, hint))
+
+    def test_unknown_provider_errors_never_echo_untrusted_bodies_or_names(self):
+        for body in (b'not JSON: server-side-test-key', b'null',
+                     b'{"name":"server-side-test-key","message":"private data"}'):
+            error = HTTPError("https://api.resend.com/emails", 403, "Forbidden", {}, BytesIO(body))
+            with self.subTest(body=body), self.assertLogs(app.logger) as logs, patch.object(app, "urlopen", side_effect=error):
+                self.assertEqual(app.send_resend_email(LEAD, "unknown-rejection"), "failed")
+            self.assertNotIn("server-side-test-key", "\n".join(logs.output))
+            self.assertNotIn("private data", "\n".join(logs.output))
 
     def test_empty_context_still_has_a_field_in_the_email(self):
         with patch.object(app, "urlopen", return_value=provider_response()) as provider:

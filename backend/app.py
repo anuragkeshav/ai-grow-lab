@@ -181,6 +181,36 @@ def email_configuration() -> tuple[str, str, list[str]]:
     return api_key, sender, notification_recipients()
 
 
+def resend_failure_details(error: HTTPError) -> tuple[str, str]:
+    """Reduce provider errors to fixed diagnostic codes, never log raw bodies."""
+    try:
+        payload = json.loads(error.read(16_000))
+    except (ValueError, OSError, HTTPException, AttributeError, TypeError):
+        return "unknown", "unknown"
+    if not isinstance(payload, dict):
+        return "unknown", "unknown"
+    allowed_names = {
+        "validation_error", "invalid_api_key", "missing_api_key", "restricted_api_key",
+        "rate_limit_exceeded", "daily_quota_exceeded", "monthly_quota_exceeded",
+        "application_error", "internal_server_error", "invalid_access",
+    }
+    name = payload.get("name")
+    name = name if isinstance(name, str) and name in allowed_names else "unknown"
+    message = payload.get("message", "")
+    message = message.lower() if isinstance(message, str) else ""
+    if "domain" in message and ("not verified" in message or "verify your domain" in message):
+        hint = "sender_domain_unverified"
+    elif "own email address" in message or "only send testing emails" in message:
+        hint = "sandbox_recipient_restriction"
+    elif name in {"invalid_api_key", "missing_api_key", "restricted_api_key"}:
+        hint = "api_key_or_permission"
+    elif "quota" in name or name == "rate_limit_exceeded":
+        hint = "provider_quota"
+    else:
+        hint = "unknown"
+    return name, hint
+
+
 def send_resend_email(lead: dict[str, str], request_id: str) -> str:
     try:
         api_key, sender, recipients = email_configuration()
@@ -233,7 +263,9 @@ def send_resend_email(lead: dict[str, str], request_id: str) -> str:
             return "sent"
     except HTTPError as error:
         # Never log raw provider bodies/exception strings: they may echo secrets.
-        logger.error("[%s] resend_response status=%d delivery_failure reason=provider_rejected", request_id, error.code)
+        provider_error, hint = resend_failure_details(error)
+        logger.error("[%s] resend_response status=%d delivery_failure reason=provider_rejected provider_error=%s hint=%s",
+                     request_id, error.code, provider_error, hint)
         error.close()
         return "uncertain" if error.code >= 500 or error.code == 408 else "failed"
     except (URLError, OSError, HTTPException) as error:
